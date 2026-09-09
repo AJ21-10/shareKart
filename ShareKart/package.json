@@ -1,0 +1,21 @@
+{
+  "name": "sharekart-fullstack",
+  "version": "1.0.0",
+  "description": "Sharekart - Hyperlocal P2P Sharing & Rental Network",
+  "scripts": {
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "seed": "cd server && npm run seed",
+    "build:client": "cd client && npm run build",
+    "start": "cd server && npm start"
+  },
+  "keywords": [
+    "sharekart",
+    "rental",
+    "p2p",
+    "escrow",
+    "ecommerce"
+  ],
+  "author": "Sharekart Team",
+  "license": "ISC"
+}
