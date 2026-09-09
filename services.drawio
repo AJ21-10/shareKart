@@ -1,0 +1,65 @@
+<mxfile host="app.diagrams.net" modified="2026-09-09T00:00:00.000Z" agent="ShareKart-design" version="24.7.0" type="device">
+  <diagram name="ShareKart Services" id="services-diagram">
+    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- User Service -->
+        <mxCell id="svc_user" value="User Service&#10;Owns: Users, Aadhaar Verifications, Sessions&#10;Team member: [Name 1]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=center;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="240" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- Item Service -->
+        <mxCell id="svc_item" value="Item Service&#10;Owns: Items, Categories, Listings&#10;Team member: [Name 2]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=center;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="60" width="240" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- Order Service (central) -->
+        <mxCell id="svc_order" value="Order Service (central)&#10;Owns: Orders, Bonds&#10;Team member: [Name 3]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;align=center;verticalAlign=middle;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="210" y="320" width="260" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Payment Service -->
+        <mxCell id="svc_payment" value="Payment Service&#10;Owns: Payments, Deposits&#10;Team member: [Name 4]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=center;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="560" width="240" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- Media Service -->
+        <mxCell id="svc_media" value="Media Service&#10;Owns: Photos, Damage Reports&#10;Team member: [Name 5]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="560" width="240" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- Arrows -->
+        <mxCell id="e1" value="checkItem: itemAvailability" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;" edge="1" parent="1" source="svc_user" target="svc_item">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e2" value="verifyUser: verificationStatus" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;" edge="1" parent="1" source="svc_order" target="svc_user">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e3" value="getItemPrice: priceCategory" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;" edge="1" parent="1" source="svc_order" target="svc_item">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e4" value="collectDeposit: depositStatus" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;" edge="1" parent="1" source="svc_order" target="svc_payment">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e5" value="uploadPhotos: photoSetId" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;" edge="1" parent="1" source="svc_order" target="svc_media">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e6" value="verifyKYC: kycStatus" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;" edge="1" parent="1" source="svc_payment" target="svc_user">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e7" value="submitDamageReport: damageCaseId" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;" edge="1" parent="1" source="svc_media" target="svc_order">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

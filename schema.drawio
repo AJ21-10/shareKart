@@ -1,0 +1,73 @@
+<mxfile host="app.diagrams.net" modified="2026-09-09T00:00:00.000Z" agent="ShareKart-schema" version="24.7.0" type="device">
+  <diagram name="ShareKart ER Schema" id="schema-diagram">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- USER SERVICE TABLES -->
+        <mxCell id="t_users" value="users&#10;--------------------&#10;PK user_id&#10;name&#10;phone&#10;email&#10;aadhaar_hash&#10;kyc_status&#10;created_at" style="shape=table;startSize=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="210" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="t_aadhaar" value="aadhaar_verifications&#10;--------------------&#10;PK verification_id&#10;FK user_id -&gt; users&#10;aadhaar_ref_token&#10;status&#10;verified_at" style="shape=table;startSize=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="300" y="40" width="220" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="t_sessions" value="sessions&#10;--------------------&#10;PK session_id&#10;FK user_id -&gt; users&#10;token&#10;expires_at" style="shape=table;startSize=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="230" width="210" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- ITEM SERVICE TABLES -->
+        <mxCell id="t_categories" value="categories&#10;--------------------&#10;PK category_id&#10;name&#10;price_band_min&#10;price_band_max" style="shape=table;startSize=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="620" y="40" width="220" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="t_items" value="items&#10;--------------------&#10;PK item_id&#10;owner_ref (ext: users)&#10;title&#10;description&#10;price&#10;FK category_id -&gt; categories&#10;mode&#10;status&#10;created_at" style="shape=table;startSize=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="900" y="40" width="240" height="180" as="geometry" />
+        </mxCell>
+
+        <!-- ORDER SERVICE TABLES -->
+        <mxCell id="t_orders" value="orders&#10;--------------------&#10;PK order_id&#10;user_ref (ext: users)&#10;item_ref (ext: items)&#10;mode&#10;status&#10;rent_start / rent_end&#10;total_amount&#10;requires_token&#10;requires_bond&#10;created_at" style="shape=table;startSize=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="620" y="300" width="240" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="t_bonds" value="bonds&#10;--------------------&#10;PK bond_id&#10;FK order_id -&gt; orders&#10;bond_document_url&#10;signed_at&#10;status" style="shape=table;startSize=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="900" y="330" width="240" height="140" as="geometry" />
+        </mxCell>
+
+        <!-- PAYMENT SERVICE TABLES -->
+        <mxCell id="t_payments" value="payments&#10;--------------------&#10;PK payment_id&#10;order_ref (ext: orders)&#10;amount&#10;type&#10;status&#10;created_at" style="shape=table;startSize=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="420" width="230" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="t_deposits" value="deposits&#10;--------------------&#10;PK deposit_id&#10;order_ref (ext: orders)&#10;amount_held&#10;status&#10;released_at" style="shape=table;startSize=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="600" width="230" height="140" as="geometry" />
+        </mxCell>
+
+        <!-- MEDIA SERVICE TABLES -->
+        <mxCell id="t_photosets" value="photo_sets&#10;--------------------&#10;PK photo_set_id&#10;order_ref (ext: orders)&#10;stage&#10;uploaded_at" style="shape=table;startSize=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="620" y="580" width="230" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="t_photos" value="photos&#10;--------------------&#10;PK photo_id&#10;FK photo_set_id -&gt; photo_sets&#10;url&#10;uploaded_at" style="shape=table;startSize=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="900" y="560" width="230" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="t_damage" value="damage_reports&#10;--------------------&#10;PK damage_id&#10;order_ref (ext: orders)&#10;FK photo_set_id -&gt; photo_sets&#10;damage_amount&#10;notes&#10;created_at" style="shape=table;startSize=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="620" y="750" width="240" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- Relationship edges (solid = in-service FK, dashed = cross-service reference) -->
+        <mxCell id="r1" style="edgeStyle=entityRelationEdgeStyle;html=1;endArrow=ERone;startArrow=ERmany;" edge="1" parent="1" source="t_aadhaar" target="t_users"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="r2" style="edgeStyle=entityRelationEdgeStyle;html=1;endArrow=ERone;startArrow=ERmany;" edge="1" parent="1" source="t_sessions" target="t_users"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="r3" style="edgeStyle=entityRelationEdgeStyle;html=1;endArrow=ERone;startArrow=ERmany;" edge="1" parent="1" source="t_items" target="t_categories"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="r4" style="edgeStyle=entityRelationEdgeStyle;html=1;endArrow=ERone;startArrow=ERmany;" edge="1" parent="1" source="t_bonds" target="t_orders"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="r5" style="edgeStyle=entityRelationEdgeStyle;html=1;endArrow=ERone;startArrow=ERmany;" edge="1" parent="1" source="t_photos" target="t_photosets"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="r6" style="edgeStyle=entityRelationEdgeStyle;html=1;endArrow=ERone;startArrow=ERmany;" edge="1" parent="1" source="t_damage" target="t_photosets"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="x1" value="owner_ref" style="edgeStyle=entityRelationEdgeStyle;html=1;dashed=1;endArrow=open;startArrow=none;" edge="1" parent="1" source="t_items" target="t_users"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="x2" value="user_ref" style="edgeStyle=entityRelationEdgeStyle;html=1;dashed=1;endArrow=open;startArrow=none;" edge="1" parent="1" source="t_orders" target="t_users"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="x3" value="item_ref" style="edgeStyle=entityRelationEdgeStyle;html=1;dashed=1;endArrow=open;startArrow=none;" edge="1" parent="1" source="t_orders" target="t_items"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="x4" value="order_ref" style="edgeStyle=entityRelationEdgeStyle;html=1;dashed=1;endArrow=open;startArrow=none;" edge="1" parent="1" source="t_payments" target="t_orders"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="x5" value="order_ref" style="edgeStyle=entityRelationEdgeStyle;html=1;dashed=1;endArrow=open;startArrow=none;" edge="1" parent="1" source="t_deposits" target="t_orders"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="x6" value="order_ref" style="edgeStyle=entityRelationEdgeStyle;html=1;dashed=1;endArrow=open;startArrow=none;" edge="1" parent="1" source="t_photosets" target="t_orders"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="x7" value="order_ref" style="edgeStyle=entityRelationEdgeStyle;html=1;dashed=1;endArrow=open;startArrow=none;" edge="1" parent="1" source="t_damage" target="t_orders"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
