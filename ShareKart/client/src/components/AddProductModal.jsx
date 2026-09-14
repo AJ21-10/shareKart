@@ -61,19 +61,19 @@ export const AddProductModal = ({ isOpen, onClose, onProductCreated, onToast }) 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-surface-container-lowest rounded-xl max-w-xl w-full p-space-24 shadow-2xl border border-outline-variant my-8 flex flex-col gap-space-16">
-        <div className="flex items-center justify-between border-b border-outline-variant pb-space-12">
-          <div className="flex items-center gap-space-8">
-            <span className="material-symbols-outlined text-secondary text-[24px]">add_circle</span>
-            <h2 className="font-headline-sm text-headline-sm text-on-surface">List Item for Rent or Sale</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-primary/60 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-surface-container-lowest rounded-xl max-w-xl w-full p-4 sm:p-space-24 shadow-2xl border border-outline-variant my-4 sm:my-8 flex flex-col gap-3 sm:gap-space-16">
+        <div className="flex items-center justify-between border-b border-outline-variant pb-2 sm:pb-space-12">
+          <div className="flex items-center gap-2 sm:gap-space-8">
+            <span className="material-symbols-outlined text-secondary text-[22px] sm:text-[24px]">add_circle</span>
+            <h2 className="font-headline-sm text-base sm:text-headline-sm text-on-surface">List Item for Rent or Sale</h2>
           </div>
           <button onClick={onClose} className="p-1 rounded-full text-on-surface-variant hover:text-on-surface">
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-space-12 text-body-sm">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:gap-space-12 text-xs sm:text-body-sm">
           {/* Title */}
           <div>
             <label className="text-badge font-badge text-on-surface-variant block mb-1">Product Title *</label>
@@ -83,18 +83,18 @@ export const AddProductModal = ({ isOpen, onClose, onProductCreated, onToast }) 
               placeholder="e.g., Sony Alpha A6400 or Bosch Hammer Drill..."
               value={formData.title}
               onChange={e => setFormData({ ...formData, title: e.target.value })}
-              className="w-full bg-surface-container-low border border-outline-variant rounded p-space-8 text-on-surface focus:ring-1 focus:ring-secondary"
+              className="w-full bg-surface-container-low border border-outline-variant rounded p-2 sm:p-space-8 text-on-surface focus:ring-1 focus:ring-secondary"
             />
           </div>
 
           {/* Category & Type */}
-          <div className="grid grid-cols-2 gap-space-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-space-12">
             <div>
               <label className="text-badge font-badge text-on-surface-variant block mb-1">Category *</label>
               <select
                 value={formData.category_id}
                 onChange={e => setFormData({ ...formData, category_id: e.target.value })}
-                className="w-full bg-surface-container-low border border-outline-variant rounded p-space-8 text-on-surface focus:ring-1 focus:ring-secondary cursor-pointer"
+                className="w-full bg-surface-container-low border border-outline-variant rounded p-2 sm:p-space-8 text-on-surface focus:ring-1 focus:ring-secondary cursor-pointer"
               >
                 <option value="cameras-audio">Cameras & Audio</option>
                 <option value="laptops-mobiles">Laptops & Mobiles</option>
@@ -110,7 +110,7 @@ export const AddProductModal = ({ isOpen, onClose, onProductCreated, onToast }) 
               <select
                 value={formData.transaction_type}
                 onChange={e => setFormData({ ...formData, transaction_type: e.target.value })}
-                className="w-full bg-surface-container-low border border-outline-variant rounded p-space-8 text-on-surface focus:ring-1 focus:ring-secondary cursor-pointer"
+                className="w-full bg-surface-container-low border border-outline-variant rounded p-2 sm:p-space-8 text-on-surface focus:ring-1 focus:ring-secondary cursor-pointer"
               >
                 <option value="rent">Rent Only</option>
                 <option value="buy">Sale Only</option>
@@ -120,7 +120,7 @@ export const AddProductModal = ({ isOpen, onClose, onProductCreated, onToast }) 
           </div>
 
           {/* Pricing Row */}
-          <div className="grid grid-cols-3 gap-space-12 bg-surface-container-low p-space-12 rounded-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-space-12 bg-surface-container-low p-2.5 sm:p-space-12 rounded-lg">
             {(formData.transaction_type === 'rent' || formData.transaction_type === 'both') && (
               <>
                 <div>
@@ -184,14 +184,14 @@ export const AddProductModal = ({ isOpen, onClose, onProductCreated, onToast }) 
           </div>
 
           {/* Location & Handover */}
-          <div className="grid grid-cols-2 gap-space-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-space-12">
             <div>
               <label className="text-badge font-badge text-on-surface-variant block mb-1">Pickup Location</label>
               <input
                 type="text"
                 value={formData.location_name}
                 onChange={e => setFormData({ ...formData, location_name: e.target.value })}
-                className="w-full bg-surface-container-low border border-outline-variant rounded p-space-8 text-on-surface"
+                className="w-full bg-surface-container-low border border-outline-variant rounded p-2 sm:p-space-8 text-on-surface"
               />
             </div>
             <div>
@@ -199,7 +199,7 @@ export const AddProductModal = ({ isOpen, onClose, onProductCreated, onToast }) 
               <select
                 value={formData.condition_tag}
                 onChange={e => setFormData({ ...formData, condition_tag: e.target.value })}
-                className="w-full bg-surface-container-low border border-outline-variant rounded p-space-8 text-on-surface cursor-pointer"
+                className="w-full bg-surface-container-low border border-outline-variant rounded p-2 sm:p-space-8 text-on-surface cursor-pointer"
               >
                 <option>Used - Like New</option>
                 <option>Used - Excellent</option>

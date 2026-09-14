@@ -1,44 +1,120 @@
-import React, { useState } from 'react';
-import { AuthProvider } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
-import { Navbar } from './components/Navbar';
-import { Footer } from './components/Footer';
-import { AuthModal } from './components/AuthModal';
-import { CartDrawer } from './components/CartDrawer';
-import { ChatModal } from './components/ChatModal';
-import { AddProductModal } from './components/AddProductModal';
-import { Toast } from './components/Toast';
+import React, { useState, useEffect } from "react";
+import { AuthProvider } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
+import { Navbar } from "./components/Navbar";
+import { Footer } from "./components/Footer";
+import { AuthModal } from "./components/AuthModal";
+import { CartDrawer } from "./components/CartDrawer";
+import { ChatModal } from "./components/ChatModal";
+import { AddProductModal } from "./components/AddProductModal";
+import { Toast } from "./components/Toast";
 
-// Pages
-import { HomePage } from './pages/HomePage';
-import { SearchPage } from './pages/SearchPage';
-import { ProductDetailsPage } from './pages/ProductDetailsPage';
-import { CheckoutPage } from './pages/CheckoutPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { OrdersPage } from './pages/OrdersPage';
+// Existing Pages
+import { HomePage } from "./pages/HomePage";
+import { SearchPage } from "./pages/SearchPage";
+import { ProductDetailsPage } from "./pages/ProductDetailsPage";
+import { CheckoutPage } from "./pages/CheckoutPage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { OrdersPage } from "./pages/OrdersPage";
+
+// Phase 2 Pages
+import { ListItemPage } from "./pages/ListItemPage";
+import { ChatPage } from "./pages/ChatPage";
+import { HandoverPassPage } from "./pages/HandoverPassPage";
+
+const resolveRoute = () => {
+  const pathname = window.location.pathname.replace(/^\/+|\/+$/g, "");
+  const hash = window.location.hash.replace(/^#\/?/, "");
+  const path = pathname || hash;
+
+  if (path === "list-item" || path === "post-listing") {
+    return { page: "list-item", params: {} };
+  }
+  if (path === "chat" || path === "chat-inbox") {
+    return { page: "chat", params: {} };
+  }
+  if (
+    path === "handover-pass" ||
+    path === "rental-pass" ||
+    path === "confirmation-pass"
+  ) {
+    return { page: "handover-pass", params: {} };
+  }
+  if (path === "orders" || path === "my-orders-rentals") {
+    return { page: "orders", params: {} };
+  }
+  if (path === "dashboard") {
+    return { page: "dashboard", params: {} };
+  }
+  if (path === "checkout") {
+    return { page: "checkout", params: {} };
+  }
+  if (path === "search") {
+    return { page: "search", params: {} };
+  }
+  if (path === "product") {
+    return { page: "product", params: {} };
+  }
+  return { page: "home", params: {} };
+};
 
 export function AppContent() {
-  const [currentPage, setCurrentPage] = useState('home');
-  const [pageParams, setPageParams] = useState({});
-  const [toastMessage, setToastMessage] = useState('');
-  
+  const initial = resolveRoute();
+  const [currentPage, setCurrentPage] = useState(initial.page);
+  const [pageParams, setPageParams] = useState(initial.params);
+  const [toastMessage, setToastMessage] = useState("");
+
   // Modals
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [chatModalOpen, setChatModalOpen] = useState(false);
   const [addProductModalOpen, setAddProductModalOpen] = useState(false);
 
+  useEffect(() => {
+    const handlePopState = (e) => {
+      const route = resolveRoute();
+      setCurrentPage(route.page);
+      setPageParams(e.state || route.params);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => {
-      setToastMessage('');
+      setToastMessage("");
     }, 4000);
   };
 
   const navigateTo = (page, params = {}) => {
-    setCurrentPage(page);
+    let targetPage = page;
+    if (
+      page === "sharekart_list_an_item_for_rent_or_sale" ||
+      page === "post-listing"
+    ) {
+      targetPage = "list-item";
+    } else if (
+      page === "sharekart_p2p_chat_neighborhood_coordination" ||
+      page === "chat-inbox"
+    ) {
+      targetPage = "chat";
+    } else if (
+      page === "sharekart_rental_handover_confirmation_pass" ||
+      page === "rental-pass" ||
+      page === "confirmation-pass"
+    ) {
+      targetPage = "handover-pass";
+    }
+
+    setCurrentPage(targetPage);
     setPageParams(params);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    const targetPath = targetPage === "home" ? "/" : `/${targetPage}`;
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(params, "", targetPath);
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -49,57 +125,70 @@ export function AppContent() {
         onNavigate={navigateTo}
         onOpenAuth={() => setAuthModalOpen(true)}
         onOpenCart={() => setCartDrawerOpen(true)}
-        onOpenChat={() => setChatModalOpen(true)}
-        onOpenAddProduct={() => setAddProductModalOpen(true)}
+        onOpenChat={() => navigateTo("chat")}
+        onOpenAddProduct={() => navigateTo("list-item")}
         onToast={showToast}
       />
 
-      {/* Main Routed Page Container (accounting for fixed h-28 header) */}
-      <main className="w-full pt-32 max-w-[1280px] mx-auto px-gutter-desktop flex-1">
-        {currentPage === 'home' && (
-          <HomePage 
-            onNavigate={navigateTo} 
-            onOpenAddProduct={() => setAddProductModalOpen(true)} 
-            onToast={showToast} 
+      {/* Main Routed Page Container */}
+      <main className="w-full pt-24 sm:pt-28 md:pt-32 max-w-[1280px] mx-auto px-3 sm:px-4 md:px-gutter-desktop pb-20 md:pb-8 flex-1">
+        {currentPage === "home" && (
+          <HomePage
+            onNavigate={navigateTo}
+            onOpenAddProduct={() => navigateTo("list-item")}
+            onToast={showToast}
           />
         )}
 
-        {currentPage === 'search' && (
-          <SearchPage 
-            initialFilters={pageParams} 
-            onNavigate={navigateTo} 
-            onToast={showToast} 
+        {currentPage === "search" && (
+          <SearchPage
+            initialFilters={pageParams}
+            onNavigate={navigateTo}
+            onToast={showToast}
           />
         )}
 
-        {currentPage === 'product' && (
-          <ProductDetailsPage 
-            productId={pageParams.id || 1} 
-            onNavigate={navigateTo} 
-            onOpenChat={() => setChatModalOpen(true)} 
-            onToast={showToast} 
+        {currentPage === "product" && (
+          <ProductDetailsPage
+            productId={pageParams.id || 1}
+            onNavigate={navigateTo}
+            onOpenChat={() => navigateTo("chat")}
+            onToast={showToast}
           />
         )}
 
-        {currentPage === 'checkout' && (
-          <CheckoutPage 
-            params={pageParams} 
-            onNavigate={navigateTo} 
-            onToast={showToast} 
+        {currentPage === "checkout" && (
+          <CheckoutPage
+            params={pageParams}
+            onNavigate={navigateTo}
+            onToast={showToast}
           />
         )}
 
-        {currentPage === 'dashboard' && (
-          <DashboardPage 
-            onNavigate={navigateTo} 
-            onOpenAddProduct={() => setAddProductModalOpen(true)} 
-            onToast={showToast} 
+        {currentPage === "dashboard" && (
+          <DashboardPage
+            onNavigate={navigateTo}
+            onOpenAddProduct={() => navigateTo("list-item")}
+            onToast={showToast}
           />
         )}
 
-        {currentPage === 'orders' && (
-          <OrdersPage 
-            onNavigate={navigateTo} 
+        {currentPage === "orders" && <OrdersPage onNavigate={navigateTo} />}
+
+        {/* Phase 2 Pages */}
+        {currentPage === "list-item" && (
+          <ListItemPage onNavigate={navigateTo} onToast={showToast} />
+        )}
+
+        {currentPage === "chat" && (
+          <ChatPage onNavigate={navigateTo} onToast={showToast} />
+        )}
+
+        {currentPage === "handover-pass" && (
+          <HandoverPassPage
+            params={pageParams}
+            onNavigate={navigateTo}
+            onToast={showToast}
           />
         )}
       </main>
@@ -126,13 +215,12 @@ export function AppContent() {
         isOpen={addProductModalOpen}
         onClose={() => setAddProductModalOpen(false)}
         onProductCreated={() => {
-          // If on home or search or dashboard, trigger refresh
-          if (currentPage === 'dashboard') {
-            navigateTo('dashboard');
-          } else if (currentPage === 'search') {
-            navigateTo('search');
+          if (currentPage === "dashboard") {
+            navigateTo("dashboard");
+          } else if (currentPage === "search") {
+            navigateTo("search");
           } else {
-            navigateTo('home');
+            navigateTo("home");
           }
         }}
         onToast={showToast}
@@ -140,10 +228,7 @@ export function AppContent() {
 
       {/* Global Toast */}
       {toastMessage && (
-        <Toast
-          message={toastMessage}
-          onClose={() => setToastMessage('')}
-        />
+        <Toast message={toastMessage} onClose={() => setToastMessage("")} />
       )}
 
       {/* Footer */}

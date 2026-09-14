@@ -48,8 +48,8 @@ export const ChatModal = ({ isOpen, onClose, recipientName = 'Vikram Joshi', rec
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/60 backdrop-blur-xs">
-      <div className="bg-surface-container-lowest rounded-xl max-w-lg w-full h-[520px] shadow-2xl border border-outline-variant flex flex-col justify-between overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-primary/60 backdrop-blur-xs">
+      <div className="bg-surface-container-lowest rounded-xl max-w-lg w-full h-[85vh] max-h-[520px] shadow-2xl border border-outline-variant flex flex-col justify-between overflow-hidden">
         {/* Chat Header */}
         <div className="p-space-12 px-space-16 bg-primary text-on-primary flex items-center justify-between">
           <div className="flex items-center gap-space-8">

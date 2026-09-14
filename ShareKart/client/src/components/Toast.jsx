@@ -6,7 +6,7 @@ export const Toast = ({ message, type = 'success', onClose }) => {
   const isSuccess = type === 'success';
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex items-center gap-space-12 bg-primary text-on-primary px-space-16 py-space-12 rounded-lg shadow-xl border border-outline/30 animate-bounce-short">
+    <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 left-4 sm:left-auto max-w-sm sm:max-w-md z-50 flex items-center justify-between gap-space-12 bg-primary text-on-primary px-space-16 py-space-12 rounded-lg shadow-xl border border-outline/30 animate-bounce-short">
       <span className={`material-symbols-outlined text-[20px] ${isSuccess ? 'text-secondary-fixed' : 'text-error'}`}>
         {isSuccess ? 'check_circle' : 'error'}
       </span>

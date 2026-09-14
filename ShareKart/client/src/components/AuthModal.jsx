@@ -44,8 +44,8 @@ export const AuthModal = ({ isOpen, onClose, onToast }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/60 backdrop-blur-xs">
-      <div className="bg-surface-container-lowest rounded-xl max-w-md w-full p-space-24 shadow-2xl border border-outline-variant relative flex flex-col gap-space-16">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-primary/60 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-surface-container-lowest rounded-xl max-w-md w-full p-4 sm:p-space-24 shadow-2xl border border-outline-variant relative flex flex-col gap-3 sm:gap-space-16 my-4 sm:my-8">
         <button 
           onClick={onClose}
           className="absolute top-space-16 right-space-16 text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container"

@@ -102,39 +102,39 @@ export const CheckoutPage = ({ params = {}, onNavigate, onToast }) => {
   return (
     <div className="w-full flex flex-col gap-space-16 pb-space-32">
       {/* Progress Stepper */}
-      <div className="w-full bg-surface-container-lowest rounded-xl p-space-16 border border-outline-variant/60 shadow-sm mb-space-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-16">
+      <div className="w-full bg-surface-container-lowest rounded-xl p-3.5 sm:p-space-16 border border-outline-variant/60 shadow-sm mb-space-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-space-16">
           <div>
-            <span className="font-badge text-badge text-secondary font-bold uppercase tracking-wider">
+            <span className="font-badge text-[10px] sm:text-badge text-secondary font-bold uppercase tracking-wider">
               Checkout Workflow
             </span>
-            <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight font-bold mt-space-2">
+            <h1 className="font-headline-lg text-base sm:text-headline-lg text-on-surface tracking-tight font-bold mt-0.5 sm:mt-space-2">
               {isRent ? 'Rental Checkout & Escrow Booking' : 'Direct Purchase & Escrow Protection'}
             </h1>
           </div>
-          <div className="flex items-center gap-space-8 text-body-sm font-body-sm overflow-x-auto pb-space-4 md:pb-0">
+          <div className="flex items-center gap-2 sm:gap-space-8 text-xs sm:text-body-sm font-body-sm overflow-x-auto pb-1 md:pb-0 scrollbar-none">
             {/* Step 1 Done */}
-            <div className="flex items-center gap-space-8 shrink-0">
-              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-secondary text-on-secondary font-label-bold text-label-bold">
-                <span className="material-symbols-outlined text-[16px]">check</span>
+            <div className="flex items-center gap-1.5 sm:gap-space-8 shrink-0">
+              <span className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-secondary text-on-secondary font-label-bold text-xs">
+                <span className="material-symbols-outlined text-[14px] sm:text-[16px]">check</span>
               </span>
-              <span className="font-label-bold text-label-bold text-on-surface">1. Dates & Plan</span>
+              <span className="font-label-bold text-on-surface">1. Dates</span>
             </div>
-            <span className="w-8 h-[2px] bg-secondary shrink-0"></span>
+            <span className="w-4 sm:w-8 h-[2px] bg-secondary shrink-0"></span>
             {/* Step 2 Active */}
-            <div className="flex items-center gap-space-8 shrink-0">
-              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary-container text-on-primary font-label-bold text-label-bold ring-4 ring-secondary-container">
+            <div className="flex items-center gap-1.5 sm:gap-space-8 shrink-0">
+              <span className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-primary-container text-on-primary font-label-bold text-xs ring-2 sm:ring-4 ring-secondary-container">
                 2
               </span>
-              <span className="font-label-bold text-label-bold text-primary font-bold">2. Identity & Delivery</span>
+              <span className="font-label-bold text-primary font-bold">2. Identity & Handover</span>
             </div>
-            <span className="w-8 h-[2px] bg-surface-container-high shrink-0"></span>
+            <span className="w-4 sm:w-8 h-[2px] bg-surface-container-high shrink-0"></span>
             {/* Step 3 Upcoming */}
-            <div className="flex items-center gap-space-8 shrink-0 text-on-surface-variant/60">
-              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-surface-container text-on-surface-variant font-label-bold text-label-bold">
+            <div className="flex items-center gap-1.5 sm:gap-space-8 shrink-0 text-on-surface-variant/60">
+              <span className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-surface-container text-on-surface-variant font-label-bold text-xs">
                 3
               </span>
-              <span className="font-body-sm text-body-sm">3. Razorpay Escrow</span>
+              <span className="text-on-surface-variant/70">3. Escrow Pay</span>
             </div>
           </div>
         </div>
@@ -535,8 +535,8 @@ export const CheckoutPage = ({ params = {}, onNavigate, onToast }) => {
 
       {/* Booking Confirmation Receipt Modal */}
       {completedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/70 backdrop-blur-xs">
-          <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-space-24 shadow-2xl border border-secondary-fixed flex flex-col gap-space-16 text-center animate-scale-up">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-primary/70 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-4 sm:p-space-24 shadow-2xl border border-secondary-fixed flex flex-col gap-3 sm:gap-space-16 text-center animate-scale-up my-4">
             <div className="w-16 h-16 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center mx-auto">
               <span className="material-symbols-outlined text-[36px]">check_circle</span>
             </div>
@@ -579,18 +579,27 @@ export const CheckoutPage = ({ params = {}, onNavigate, onToast }) => {
               </div>
             </div>
 
-            <div className="flex gap-space-12 mt-2">
+            <div className="flex flex-col sm:flex-row gap-space-12 mt-2">
               <button
-                onClick={() => onNavigate('orders')}
-                className="flex-1 bg-secondary text-on-secondary py-space-12 rounded-lg font-label-bold shadow-sm"
+                onClick={() =>
+                  onNavigate('handover-pass', {
+                    bookingId: completedOrder.id,
+                    escrow_pin: completedOrder.escrow_pin,
+                    title: completedOrder.product_title,
+                    total_amount: completedOrder.total_amount,
+                    deposit_fee: completedOrder.deposit_fee
+                  })
+                }
+                className="flex-1 bg-secondary text-on-secondary py-space-12 px-space-16 rounded-lg font-label-bold shadow-sm hover:bg-secondary-container hover:text-on-secondary-container transition-colors flex items-center justify-center gap-1 cursor-pointer"
               >
-                View in My Bookings
+                <span className="material-symbols-outlined text-[18px]">vpn_key</span>
+                <span>View Handover Pass</span>
               </button>
               <button
-                onClick={() => onNavigate('home')}
-                className="px-space-16 py-space-12 border border-outline-variant rounded-lg font-label-bold text-on-surface hover:bg-surface-container"
+                onClick={() => onNavigate('orders')}
+                className="px-space-16 py-space-12 border border-outline-variant rounded-lg font-label-bold text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
               >
-                Back to Store
+                My Bookings
               </button>
             </div>
           </div>

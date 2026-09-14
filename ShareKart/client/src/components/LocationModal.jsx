@@ -170,8 +170,8 @@ export const LocationModal = ({ isOpen, onClose, onToast }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-space-20 shadow-2xl border border-outline-variant my-8 flex flex-col gap-space-16 text-on-surface animate-scale-up">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-primary/60 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-3.5 sm:p-space-20 shadow-2xl border border-outline-variant my-4 sm:my-8 flex flex-col gap-3 sm:gap-space-16 text-on-surface animate-scale-up">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-outline-variant/60 pb-space-12">
           <div className="flex items-center gap-space-8">

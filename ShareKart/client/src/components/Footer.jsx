@@ -2,10 +2,10 @@ import React from 'react';
 
 export const Footer = ({ onNavigate }) => {
   return (
-    <footer className="bg-primary-container text-on-primary-container border-t border-outline/20 mt-space-32">
+    <footer className="bg-primary-container text-on-primary-container border-t border-outline/20 mt-space-32 mb-16 md:mb-0">
       {/* Trust Guarantee Band */}
       <div className="border-b border-outline/20 bg-primary/40 py-space-16">
-        <div className="max-w-[1280px] mx-auto px-gutter-desktop grid grid-cols-1 md:grid-cols-3 gap-space-16">
+        <div className="max-w-[1280px] mx-auto px-3 sm:px-4 md:px-gutter-desktop grid grid-cols-1 md:grid-cols-3 gap-space-16">
           <div className="flex items-center gap-space-12">
             <span className="material-symbols-outlined text-secondary-fixed text-[28px]">verified_user</span>
             <div>
@@ -31,7 +31,7 @@ export const Footer = ({ onNavigate }) => {
       </div>
 
       {/* Main Footer Links */}
-      <div className="max-w-[1280px] mx-auto px-gutter-desktop py-space-32 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-24">
+      <div className="max-w-[1280px] mx-auto px-3 sm:px-4 md:px-gutter-desktop py-space-32 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-24">
         <div className="flex flex-col gap-space-12">
           <div className="flex items-center gap-space-8">
             <img 

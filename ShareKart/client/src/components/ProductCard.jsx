@@ -66,43 +66,43 @@ export const ProductCard = ({ product, onSelectProduct, onQuickRent, onQuickBuy,
       </div>
 
       {/* Body Content */}
-      <div className="p-space-12 flex flex-col gap-space-8 flex-1 justify-between">
+      <div className="p-3 sm:p-space-12 flex flex-col gap-2 sm:gap-space-8 flex-1 justify-between">
         <div className="flex flex-col gap-space-4">
           {/* Price Row */}
-          <div className="flex items-baseline justify-between">
+          <div className="flex items-baseline justify-between flex-wrap gap-1">
             <div className="flex items-baseline gap-1">
-              <span className="font-price-md text-price-md font-bold text-on-surface">
+              <span className="font-price-md text-base sm:text-price-md font-bold text-on-surface">
                 ₹{(isRent ? product.rent_price_daily : product.sale_price).toLocaleString('en-IN')}
               </span>
               {isRent && (
-                <span className="text-body-sm text-on-surface-variant">/ day</span>
+                <span className="text-xs sm:text-body-sm text-on-surface-variant">/ day</span>
               )}
             </div>
             {isRent && product.security_deposit > 0 && (
-              <span className="text-[11px] text-on-surface-variant">
+              <span className="text-[10px] sm:text-[11px] text-on-surface-variant">
                 Deposit: ₹{product.security_deposit.toLocaleString('en-IN')}
               </span>
             )}
             {isSale && product.original_mrp > 0 && (
-              <span className="text-[11px] text-on-surface-variant line-through">
+              <span className="text-[10px] sm:text-[11px] text-on-surface-variant line-through">
                 MRP ₹{product.original_mrp.toLocaleString('en-IN')}
               </span>
             )}
           </div>
 
           {/* Product Title */}
-          <h3 className="font-label-bold text-body-md text-on-surface line-clamp-2 leading-snug group-hover:text-secondary transition-colors">
+          <h3 className="font-label-bold text-xs sm:text-body-md text-on-surface line-clamp-2 leading-snug group-hover:text-secondary transition-colors">
             {product.title}
           </h3>
 
           {/* Condition Tag */}
-          <div className="flex items-center gap-space-6 mt-0.5">
-            <span className="bg-surface-container text-on-surface px-space-6 py-0.5 rounded text-[11px] font-medium">
+          <div className="flex items-center gap-1.5 sm:gap-space-6 mt-0.5 flex-wrap">
+            <span className="bg-surface-container text-on-surface px-1.5 sm:px-space-6 py-0.5 rounded text-[10px] sm:text-[11px] font-medium">
               {product.condition_tag || 'Used - Excellent'}
             </span>
             {product.inspection_score && (
-              <span className="text-secondary text-[11px] font-bold flex items-center gap-0.5">
-                <span className="material-symbols-outlined text-[12px]">verified</span>
+              <span className="text-secondary text-[10px] sm:text-[11px] font-bold flex items-center gap-0.5">
+                <span className="material-symbols-outlined text-[11px] sm:text-[12px]">verified</span>
                 Score {product.inspection_score}/100
               </span>
             )}
@@ -110,23 +110,23 @@ export const ProductCard = ({ product, onSelectProduct, onQuickRent, onQuickBuy,
         </div>
 
         {/* Location & Seller Verification Strip */}
-        <div className="pt-space-8 border-t border-outline-variant/50 flex flex-col gap-space-6">
-          <div className="flex items-center justify-between text-body-sm text-on-surface-variant">
-            <span className="flex items-center gap-1 truncate max-w-[65%]">
-              <span className="material-symbols-outlined text-[15px] text-secondary shrink-0">pin_drop</span>
+        <div className="pt-2 sm:pt-space-8 border-t border-outline-variant/50 flex flex-col gap-1.5 sm:gap-space-6">
+          <div className="flex items-center justify-between text-xs text-on-surface-variant">
+            <span className="flex items-center gap-1 truncate max-w-[60%] sm:max-w-[65%]">
+              <span className="material-symbols-outlined text-[14px] sm:text-[15px] text-secondary shrink-0">pin_drop</span>
               <span className="truncate">{product.location_name || 'Gandhinagar'}</span>
             </span>
-            <span className="text-xs font-medium shrink-0">
+            <span className="text-[11px] sm:text-xs font-medium shrink-0">
               {product.distance_km || 2.5} km away
             </span>
           </div>
 
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-[11px] sm:text-xs">
             <span className="flex items-center gap-1 text-secondary font-medium">
-              <span className="material-symbols-outlined text-[13px]">check_circle</span>
-              Aadhaar Verified
+              <span className="material-symbols-outlined text-[12px] sm:text-[13px]">check_circle</span>
+              <span className="hidden xs:inline">Aadhaar</span> Verified
             </span>
-            <span className="text-on-surface-variant">
+            <span className="text-on-surface-variant truncate max-w-[100px] text-right">
               {product.seller_name || 'Verified Lender'}
             </span>
           </div>
