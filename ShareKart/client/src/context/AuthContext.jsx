@@ -102,6 +102,20 @@ export const AuthProvider = ({ children }) => {
     setUser(demoUser);
   };
 
+  const otpLogin = async (phone, channel = 'sms') => {
+    const data = await api.otpLogin(phone, channel);
+    if (data.success) {
+      localStorage.setItem('sharekart_token', data.token);
+      setToken(data.token);
+      setUser(data.user);
+    }
+    return data;
+  };
+
+  const updateUser = (updatedFields) => {
+    setUser(prev => ({ ...prev, ...updatedFields }));
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -113,6 +127,8 @@ export const AuthProvider = ({ children }) => {
       demoAccounts,
       login,
       register,
+      otpLogin,
+      updateUser,
       logout,
       switchDemoUser
     }}>

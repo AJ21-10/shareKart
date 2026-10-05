@@ -32,12 +32,12 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
               >
                 <img
                   alt="Sharekart Logo"
-                  className="h-7 sm:h-8 w-auto object-contain"
-                  src="https://lh3.googleusercontent.com/aida/AEtjO1UM7nAmAg-wn8ekbV1KgaHp_BP1JrxBbMUvzHpWog8Pt_LKP465A8rT68RxdchMiQk7V9tOcZ3hRgnax2OHH2Hqmh275I_sKTFIeUNCPUiK0_09ZvHhvBt3KFDQr2ziZC4xF6G0K9PvPyu9xXO7n0-PhwliRLHuNwvO0pyOlRvnPZ9R6ynfK7cyyx7p8I1FsdqfBkRiJBS3MsKqWf8nfgDxPwseImCdDa9YtrNll44MiCS3IWyT832xcLpP"
+                  className="h-8 sm:h-9 w-auto object-contain"
+                  src="/sharekart-logo.png"
+                  onError={(e) => {
+                    e.target.src = "https://lh3.googleusercontent.com/aida/AEtjO1VhknTFZdm6xFcIukdmwyVIWdYl6qKlsxXZSCfQsg80lqAgh7pP_2Ry-dxw0_5YUvkR841K_qebczNRSc9U0R5HNzr1LDHC4shNDN5anQzx-RVhORkDXnmcZX8JRhh7UJyAjUqfWNLItx1D5TCn76BqWKaa2eEgoiRUYJM-bvLqCDw0PL1GNSHDjfc88rcqrRdo7ZarUKtUM4tVEHywAXiBgA4ASG8-sTeMwjYAboXgOHOnVBJUo0VLYQmY";
+                  }}
                 />
-                <span className="font-headline-sm text-base sm:text-headline-sm text-on-primary tracking-tight font-bold">
-                  Sharekart
-                </span>
               </button>
 
               {/* Location Selector Button with Real-Time Indicator - Visible on all devices */}
@@ -203,10 +203,79 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
                             setProfileDropdownOpen(false);
                             onNavigate('dashboard');
                           }}
-                          className="w-full px-4 py-2.5 text-left text-body-sm hover:bg-surface-container flex items-center gap-2 font-label-bold text-secondary"
+                          className="w-full px-4 py-2 text-left text-body-sm hover:bg-surface-container flex items-center justify-between font-label-bold text-secondary"
                         >
-                          <span className="material-symbols-outlined text-[18px]">dashboard</span>
-                          <span>Seller / Lender Hub</span>
+                          <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[18px]">dashboard</span>
+                            <span>Seller / Lender Hub</span>
+                          </div>
+                          <span className="text-[10px] bg-secondary/15 text-secondary px-1.5 py-0.5 rounded font-bold">PRO</span>
+                        </button>
+
+                        <div className="pl-7 pr-4 py-1 flex flex-col gap-0.5 text-xs text-on-surface-variant">
+                          <button
+                            onClick={() => {
+                              setProfileDropdownOpen(false);
+                              onNavigate('inventory');
+                            }}
+                            className="text-left py-1 hover:text-primary flex items-center gap-1.5"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">inventory_2</span>
+                            <span>My Inventory & Listings</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setProfileDropdownOpen(false);
+                              onNavigate('contracts');
+                            }}
+                            className="text-left py-1 hover:text-primary flex items-center gap-1.5"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">history_edu</span>
+                            <span>Rental Contracts & Escrow</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setProfileDropdownOpen(false);
+                              onNavigate('payouts');
+                            }}
+                            className="text-left py-1 hover:text-primary flex items-center gap-1.5"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">account_balance_wallet</span>
+                            <span>Escrow & UPI Payouts</span>
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setProfileDropdownOpen(false);
+                            onNavigate('profile');
+                          }}
+                          className="w-full px-4 py-2 text-left text-body-sm hover:bg-surface-container flex items-center gap-2"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">badge</span>
+                          <span>Public Trust Profile</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setProfileDropdownOpen(false);
+                            onNavigate('aadhaar-ekyc');
+                          }}
+                          className="w-full px-4 py-2 text-left text-body-sm hover:bg-surface-container flex items-center gap-2"
+                        >
+                          <span className="material-symbols-outlined text-[18px] text-secondary">verified_user</span>
+                          <span>UIDAI Aadhaar eKYC</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setProfileDropdownOpen(false);
+                            onNavigate('disputes');
+                          }}
+                          className="w-full px-4 py-2 text-left text-body-sm hover:bg-surface-container flex items-center gap-2"
+                        >
+                          <span className="material-symbols-outlined text-[18px] text-error">gavel</span>
+                          <span>Mediation Desk</span>
                         </button>
 
                         <button
@@ -333,6 +402,30 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
                 {cat.label}
               </button>
             ))}
+
+            <div className="hidden sm:flex items-center gap-1.5 ml-auto pl-2 border-l border-outline/30 shrink-0">
+              <button
+                onClick={() => onNavigate('dashboard')}
+                className="whitespace-nowrap px-2 py-0.5 rounded text-[11px] font-bold text-secondary-fixed bg-primary/40 hover:bg-primary/70 transition-colors flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-[13px]">dashboard</span>
+                Seller Hub
+              </button>
+              <button
+                onClick={() => onNavigate('aadhaar-ekyc')}
+                className="whitespace-nowrap px-2 py-0.5 rounded text-[11px] font-bold text-secondary-fixed bg-primary/40 hover:bg-primary/70 transition-colors flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-[13px]">verified_user</span>
+                eKYC
+              </button>
+              <button
+                onClick={() => onNavigate('disputes')}
+                className="whitespace-nowrap px-2 py-0.5 rounded text-[11px] font-bold text-on-primary/80 hover:text-on-primary hover:bg-primary/50 transition-colors flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-[13px]">gavel</span>
+                Mediation
+              </button>
+            </div>
           </nav>
         </div>
 

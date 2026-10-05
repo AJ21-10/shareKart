@@ -581,27 +581,40 @@ export const HandoverPassPage = ({ params = {}, onNavigate, onToast }) => {
 
       {/* Bottom Navigation Actions Bar */}
       <div className="w-full bg-surface-container-lowest rounded-xl p-4 sm:p-space-20 shadow-md mt-space-24 flex flex-col md:flex-row items-center justify-between gap-space-16 border border-outline-variant/40">
-        <div className="flex items-center gap-space-12 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-space-12 w-full md:w-auto">
           <button
             onClick={() => onNavigate('orders')}
-            className="w-full md:w-auto bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-bold text-label-bold px-space-20 py-space-12 rounded flex items-center justify-center gap-space-8 transition-colors cursor-pointer"
+            className="w-full sm:w-auto bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-bold text-label-bold px-space-20 py-space-12 rounded flex items-center justify-center gap-space-8 transition-colors cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[18px]">arrow_back</span> Return to Dashboard
+            <span className="material-symbols-outlined text-[18px]">arrow_back</span> Return to Orders
           </button>
           <button
             onClick={() => onNavigate('chat')}
-            className="w-full md:w-auto bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-bold text-label-bold px-space-20 py-space-12 rounded flex items-center justify-center gap-space-8 transition-colors cursor-pointer"
+            className="w-full sm:w-auto bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-bold text-label-bold px-space-20 py-space-12 rounded flex items-center justify-center gap-space-8 transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">forum</span> Message Lender
           </button>
         </div>
 
-        <div className="flex items-center gap-space-12 w-full md:w-auto justify-end">
+        <div className="flex flex-wrap items-center gap-space-12 w-full md:w-auto justify-end">
+          <button
+            onClick={() =>
+              onNavigate('return-pass', {
+                bookingId,
+                title: itemTitle,
+                deposit_fee: escrowDeposit
+              })
+            }
+            className="w-full sm:w-auto bg-secondary hover:bg-secondary/90 text-on-secondary font-label-bold text-label-bold px-space-20 py-space-12 rounded flex items-center justify-center gap-space-8 transition-colors shadow-sm cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">assignment_return</span>
+            <span>Return & Refund Check</span>
+          </button>
           <button
             onClick={() => window.print()}
-            className="w-full md:w-auto bg-primary hover:bg-inverse-surface text-on-primary font-label-bold text-label-bold px-space-24 py-space-12 rounded flex items-center justify-center gap-space-8 transition-colors shadow-sm cursor-pointer"
+            className="w-full sm:w-auto bg-primary hover:bg-inverse-surface text-on-primary font-label-bold text-label-bold px-space-20 py-space-12 rounded flex items-center justify-center gap-space-8 transition-colors shadow-sm cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[18px]">description</span> Download Tax Invoice & Contract (PDF)
+            <span className="material-symbols-outlined text-[18px]">description</span> Download Tax Invoice
           </button>
         </div>
       </div>

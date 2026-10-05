@@ -22,6 +22,13 @@ import { ListItemPage } from "./pages/ListItemPage";
 import { ChatPage } from "./pages/ChatPage";
 import { HandoverPassPage } from "./pages/HandoverPassPage";
 
+// Phase 3 Pages & Modals
+import { AadhaarKycPage } from "./pages/AadhaarKycPage";
+import { DisputeMediationPage } from "./pages/DisputeMediationPage";
+import { PublicTrustProfilePage } from "./pages/PublicTrustProfilePage";
+import { ReturnHandoverPage } from "./pages/ReturnHandoverPage";
+import { QuickRentModal } from "./components/QuickRentModal";
+
 const resolveRoute = () => {
   const pathname = window.location.pathname.replace(/^\/+|\/+$/g, "");
   const hash = window.location.hash.replace(/^#\/?/, "");
@@ -46,6 +53,39 @@ const resolveRoute = () => {
   if (path === "dashboard") {
     return { page: "dashboard", params: {} };
   }
+  if (path === "inventory") {
+    return { page: "dashboard", params: { tab: "inventory" } };
+  }
+  if (path === "contracts") {
+    return { page: "dashboard", params: { tab: "contracts" } };
+  }
+  if (path === "payouts") {
+    return { page: "dashboard", params: { tab: "payouts" } };
+  }
+  if (
+    path === "aadhaar-ekyc" ||
+    path === "kyc" ||
+    path === "uidai-verification"
+  ) {
+    return { page: "aadhaar-ekyc", params: {} };
+  }
+  if (path === "disputes" || path === "mediation" || path === "arbitration") {
+    return { page: "disputes", params: {} };
+  }
+  if (
+    path === "profile" ||
+    path === "trust-profile" ||
+    path === "seller-profile"
+  ) {
+    return { page: "profile", params: {} };
+  }
+  if (
+    path === "return-pass" ||
+    path === "return-handover" ||
+    path === "return-check"
+  ) {
+    return { page: "return-pass", params: {} };
+  }
   if (path === "checkout") {
     return { page: "checkout", params: {} };
   }
@@ -69,6 +109,7 @@ export function AppContent() {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [chatModalOpen, setChatModalOpen] = useState(false);
   const [addProductModalOpen, setAddProductModalOpen] = useState(false);
+  const [quickRentProduct, setQuickRentProduct] = useState(null);
 
   useEffect(() => {
     const handlePopState = (e) => {
@@ -89,6 +130,8 @@ export function AppContent() {
 
   const navigateTo = (page, params = {}) => {
     let targetPage = page;
+    let targetParams = { ...params };
+
     if (
       page === "sharekart_list_an_item_for_rent_or_sale" ||
       page === "post-listing"
@@ -105,14 +148,29 @@ export function AppContent() {
       page === "confirmation-pass"
     ) {
       targetPage = "handover-pass";
+    } else if (page === "kyc" || page === "uidai-verification") {
+      targetPage = "aadhaar-ekyc";
+    } else if (page === "mediation" || page === "arbitration") {
+      targetPage = "disputes";
+    } else if (page === "trust-profile" || page === "seller-profile") {
+      targetPage = "profile";
+    } else if (page === "return-handover" || page === "return-check") {
+      targetPage = "return-pass";
+    } else if (
+      page === "inventory" ||
+      page === "contracts" ||
+      page === "payouts"
+    ) {
+      targetPage = "dashboard";
+      targetParams = { ...targetParams, tab: page };
     }
 
     setCurrentPage(targetPage);
-    setPageParams(params);
+    setPageParams(targetParams);
 
     const targetPath = targetPage === "home" ? "/" : `/${targetPage}`;
     if (window.location.pathname !== targetPath) {
-      window.history.pushState(params, "", targetPath);
+      window.history.pushState(targetParams, "", targetPath);
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -136,6 +194,7 @@ export function AppContent() {
           <HomePage
             onNavigate={navigateTo}
             onOpenAddProduct={() => navigateTo("list-item")}
+            onQuickRent={(prod) => setQuickRentProduct(prod)}
             onToast={showToast}
           />
         )}
@@ -167,6 +226,7 @@ export function AppContent() {
 
         {currentPage === "dashboard" && (
           <DashboardPage
+            params={pageParams}
             onNavigate={navigateTo}
             onOpenAddProduct={() => navigateTo("list-item")}
             onToast={showToast}
@@ -186,6 +246,27 @@ export function AppContent() {
 
         {currentPage === "handover-pass" && (
           <HandoverPassPage
+            params={pageParams}
+            onNavigate={navigateTo}
+            onToast={showToast}
+          />
+        )}
+
+        {/* Phase 3 Pages */}
+        {currentPage === "aadhaar-ekyc" && (
+          <AadhaarKycPage onNavigate={navigateTo} onToast={showToast} />
+        )}
+
+        {currentPage === "disputes" && (
+          <DisputeMediationPage onNavigate={navigateTo} onToast={showToast} />
+        )}
+
+        {currentPage === "profile" && (
+          <PublicTrustProfilePage onNavigate={navigateTo} onToast={showToast} />
+        )}
+
+        {currentPage === "return-pass" && (
+          <ReturnHandoverPage
             params={pageParams}
             onNavigate={navigateTo}
             onToast={showToast}
@@ -223,6 +304,15 @@ export function AppContent() {
             navigateTo("home");
           }
         }}
+        onToast={showToast}
+      />
+
+      {/* Phase 3 Bottom Sheet / Drawer Modal */}
+      <QuickRentModal
+        isOpen={!!quickRentProduct}
+        product={quickRentProduct}
+        onClose={() => setQuickRentProduct(null)}
+        onNavigate={navigateTo}
         onToast={showToast}
       />
 

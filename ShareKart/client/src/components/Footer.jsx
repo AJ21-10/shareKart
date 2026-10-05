@@ -34,12 +34,16 @@ export const Footer = ({ onNavigate }) => {
       <div className="max-w-[1280px] mx-auto px-3 sm:px-4 md:px-gutter-desktop py-space-32 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-24">
         <div className="flex flex-col gap-space-12">
           <div className="flex items-center gap-space-8">
-            <img 
-              alt="Sharekart Logo" 
-              className="h-7 w-auto object-contain" 
-              src="https://lh3.googleusercontent.com/aida/AEtjO1UM7nAmAg-wn8ekbV1KgaHp_BP1JrxBbMUvzHpWog8Pt_LKP465A8rT68RxdchMiQk7V9tOcZ3hRgnax2OHH2Hqmh275I_sKTFIeUNCPUiK0_09ZvHhvBt3KFDQr2ziZC4xF6G0K9PvPyu9xXO7n0-PhwliRLHuNwvO0pyOlRvnPZ9R6ynfK7cyyx7p8I1FsdqfBkRiJBS3MsKqWf8nfgDxPwseImCdDa9YtrNll44MiCS3IWyT832xcLpP" 
-            />
-            <span className="font-headline-sm text-on-primary font-bold">Sharekart</span>
+            <div className="bg-surface-container-lowest px-2 py-1 rounded-lg inline-flex items-center">
+              <img 
+                alt="Sharekart Logo" 
+                className="h-7 w-auto object-contain" 
+                src="/sharekart-logo.png"
+                onError={(e) => {
+                  e.target.src = "https://lh3.googleusercontent.com/aida/AEtjO1VhknTFZdm6xFcIukdmwyVIWdYl6qKlsxXZSCfQsg80lqAgh7pP_2Ry-dxw0_5YUvkR841K_qebczNRSc9U0R5HNzr1LDHC4shNDN5anQzx-RVhORkDXnmcZX8JRhh7UJyAjUqfWNLItx1D5TCn76BqWKaa2eEgoiRUYJM-bvLqCDw0PL1GNSHDjfc88rcqrRdo7ZarUKtUM4tVEHywAXiBgA4ASG8-sTeMwjYAboXgOHOnVBJUo0VLYQmY";
+                }}
+              />
+            </div>
           </div>
           <p className="text-body-sm leading-relaxed">
             India's hyperlocal peer-to-peer sharing and pre-owned commerce platform. Save money, monetize idle assets, and connect safely with neighbors.

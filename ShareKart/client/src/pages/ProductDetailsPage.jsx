@@ -627,17 +627,17 @@ export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onTo
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={onOpenChat}
-                className="flex items-center justify-center gap-1.5 bg-primary text-on-primary py-2 px-2.5 rounded font-label-bold text-xs hover:bg-inverse-surface transition-colors"
+                className="flex items-center justify-center gap-1.5 bg-primary text-on-primary py-2 px-2.5 rounded font-label-bold text-xs hover:bg-inverse-surface transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">chat</span>
                 <span>Chat</span>
               </button>
               <button
-                onClick={onOpenChat}
-                className="flex items-center justify-center gap-1.5 bg-surface-container text-on-surface py-2 px-2.5 rounded font-label-bold text-xs hover:bg-surface-container-high transition-colors"
+                onClick={() => onNavigate('profile')}
+                className="flex items-center justify-center gap-1.5 bg-secondary-container text-on-secondary-container py-2 px-2.5 rounded font-label-bold text-xs hover:bg-secondary hover:text-on-secondary transition-colors cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[16px]">help_outline</span>
-                <span>Ask</span>
+                <span className="material-symbols-outlined text-[16px]">badge</span>
+                <span>Trust Profile</span>
               </button>
             </div>
           </div>

@@ -172,5 +172,66 @@ export const api = {
       body: JSON.stringify({ receiverId, productId, content })
     });
     return handleResponse(res);
+  },
+
+  // Phase 3: OTP Authentication & Aadhaar eKYC
+  async otpLogin(phone, channel = 'sms') {
+    const res = await fetch(`${API_BASE}/auth/otp-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, channel })
+    });
+    return handleResponse(res);
+  },
+
+  async verifyAadhaar(aadhaarNumber) {
+    const res = await fetch(`${API_BASE}/auth/verify-aadhaar`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ aadhaarNumber })
+    });
+    return handleResponse(res);
+  },
+
+  async getUserProfile(userId) {
+    const res = await fetch(`${API_BASE}/auth/profile/${userId || ''}`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(res);
+  },
+
+  // Phase 3: Dispute Mediation & Arbitration Center
+  async getDisputes() {
+    const res = await fetch(`${API_BASE}/disputes`);
+    return handleResponse(res);
+  },
+
+  async fileDispute(disputeData) {
+    const res = await fetch(`${API_BASE}/disputes`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(disputeData)
+    });
+    return handleResponse(res);
+  },
+
+  async resolveDispute(id, action, resolutionNotes) {
+    const res = await fetch(`${API_BASE}/disputes/${id}/resolve`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ action, resolution_notes: resolutionNotes })
+    });
+    return handleResponse(res);
+  },
+
+  // Phase 3: Return Handover & Escrow Security Deposit Refund
+  async completeReturn(rentalId, upiId = 'aarav@okaxis', checklistPassed = true) {
+    const res = await fetch(`${API_BASE}/rentals/${rentalId}/return`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ upi_id: upiId, checklist_passed: checklistPassed })
+    });
+    return handleResponse(res);
   }
 };
+

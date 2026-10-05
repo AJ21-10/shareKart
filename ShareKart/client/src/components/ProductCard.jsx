@@ -126,9 +126,22 @@ export const ProductCard = ({ product, onSelectProduct, onQuickRent, onQuickBuy,
               <span className="material-symbols-outlined text-[12px] sm:text-[13px]">check_circle</span>
               <span className="hidden xs:inline">Aadhaar</span> Verified
             </span>
-            <span className="text-on-surface-variant truncate max-w-[100px] text-right">
-              {product.seller_name || 'Verified Lender'}
-            </span>
+            {isRent && onQuickRent ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onQuickRent(product);
+                }}
+                className="bg-secondary hover:bg-secondary/90 text-on-secondary px-2 py-0.5 rounded text-[11px] font-bold shadow-xs transition-colors cursor-pointer"
+              >
+                Quick Rent
+              </button>
+            ) : (
+              <span className="text-on-surface-variant truncate max-w-[100px] text-right">
+                {product.seller_name || 'Verified Lender'}
+              </span>
+            )}
           </div>
         </div>
       </div>

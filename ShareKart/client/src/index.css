@@ -3,16 +3,18 @@
 @tailwind utilities;
 
 @layer base {
-  html, body {
+  html,
+  body {
     margin: 0;
     padding: 0;
     background-color: #f8f9ff;
     color: #0b1c30;
-    font-family: 'Inter', sans-serif;
+    font-family: "Inter", sans-serif;
   }
 
   /* Strict currency rupee styling with tabular numbers */
-  .font-rupee, .price-value {
+  .font-rupee,
+  .price-value {
     font-variant-numeric: tabular-nums;
   }
 
@@ -35,10 +37,86 @@
 
 /* Material Symbols fill utility */
 .material-symbols-fill {
-  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-variation-settings:
+    "FILL" 1,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
 }
 
 /* Smooth transitions for interactive elements */
-button, a {
+button,
+a {
   transition: all 0.15s ease-in-out;
+}
+
+/* Floating Card Keyframe Animations */
+@keyframes floatSoft1 {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes floatSoft2 {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(5px);
+  }
+}
+
+.animate-float-1 {
+  animation: floatSoft1 4.5s ease-in-out infinite;
+}
+
+.animate-float-2 {
+  animation: floatSoft2 5.5s ease-in-out infinite;
+}
+
+@keyframes floatUp {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes floatDown {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+@keyframes floatSubtle {
+  0%,
+  100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.008);
+  }
+}
+
+.anim-float-up {
+  animation: floatUp 5s ease-in-out infinite;
+}
+
+.anim-float-down {
+  animation: floatDown 6s ease-in-out infinite;
+}
+
+.anim-float-subtle {
+  animation: floatSubtle 7s ease-in-out infinite;
 }
