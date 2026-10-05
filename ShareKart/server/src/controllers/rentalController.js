@@ -1,10 +1,11 @@
 import db from '../config/db.js';
+import { parseJson } from '../utils/helpers.js';
 
-export const calculateCost = (req, res, next) => {
+export const calculateCost = async (req, res, next) => {
   try {
     const { productId, startDate, endDate, deliveryType = 'pickup', orderType = 'rent' } = req.body;
 
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId);
+    const product = await db.get('SELECT * FROM products WHERE id = ?', [productId]);
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found.' });
     }
@@ -65,7 +66,7 @@ export const calculateCost = (req, res, next) => {
   }
 };
 
-export const checkout = (req, res, next) => {
+export const checkout = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const {
@@ -79,7 +80,7 @@ export const checkout = (req, res, next) => {
       paymentMethod = 'upi'
     } = req.body;
 
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId);
+    const product = await db.get('SELECT * FROM products WHERE id = ?', [productId]);
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found.' });
     }
@@ -104,7 +105,7 @@ export const checkout = (req, res, next) => {
     const orderId = 'SK-' + (orderType === 'buy' ? 'BUY-' : 'ORD-') + Math.floor(10000 + Math.random() * 90000);
     const escrowPin = 'PIN-' + Math.floor(1000 + Math.random() * 9000);
 
-    const stmt = db.prepare(`
+    const sql = `
       INSERT INTO rentals (
         id, user_id, product_id, order_type, start_date, end_date, total_days,
         rent_fee, deposit_fee, platform_fee, gst_fee, delivery_fee, total_amount,
@@ -116,9 +117,9 @@ export const checkout = (req, res, next) => {
         ?, ?, ?, 'completed', 'held_in_escrow',
         ?, 'pending_approval'
       )
-    `);
+    `;
 
-    stmt.run(
+    await db.run(sql, [
       orderId,
       userId,
       productId,
@@ -136,18 +137,20 @@ export const checkout = (req, res, next) => {
       deliveryAddress || 'Self Pickup at verified location',
       paymentMethod,
       escrowPin
-    );
+    ]);
 
     // Fetch the created rental with joined product info
-    const rental = db.prepare(`
+    const rental = await db.get(`
       SELECT r.*, p.title as product_title, p.images as product_images, u.name as seller_name
       FROM rentals r
       JOIN products p ON r.product_id = p.id
       JOIN users u ON p.seller_id = u.id
       WHERE r.id = ?
-    `).get(orderId);
+    `, [orderId]);
 
-    rental.product_images = JSON.parse(rental.product_images || '[]');
+    if (rental) {
+      rental.product_images = parseJson(rental.product_images, []);
+    }
 
     res.status(201).json({
       success: true,
@@ -159,11 +162,11 @@ export const checkout = (req, res, next) => {
   }
 };
 
-export const getMyRentals = (req, res, next) => {
+export const getMyRentals = async (req, res, next) => {
   try {
     const userId = req.user.id;
 
-    const rentals = db.prepare(`
+    const rentals = await db.all(`
       SELECT 
         r.*,
         p.title as product_title,
@@ -177,11 +180,11 @@ export const getMyRentals = (req, res, next) => {
       JOIN users u ON p.seller_id = u.id
       WHERE r.user_id = ?
       ORDER BY r.created_at DESC
-    `).all(userId);
+    `, [userId]);
 
     const formatted = rentals.map(r => ({
       ...r,
-      product_images: JSON.parse(r.product_images || '[]')
+      product_images: parseJson(r.product_images, [])
     }));
 
     res.json({
@@ -193,18 +196,18 @@ export const getMyRentals = (req, res, next) => {
   }
 };
 
-export const updateRentalStatus = (req, res, next) => {
+export const updateRentalStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status, escrow_status } = req.body;
     const userId = req.user.id;
 
-    const rental = db.prepare(`
+    const rental = await db.get(`
       SELECT r.*, p.seller_id
       FROM rentals r
       JOIN products p ON r.product_id = p.id
       WHERE r.id = ?
-    `).get(id);
+    `, [id]);
 
     if (!rental) {
       return res.status(404).json({ success: false, message: 'Rental order not found.' });
@@ -226,15 +229,57 @@ export const updateRentalStatus = (req, res, next) => {
       updates.push('escrow_status = ?');
       params.push(escrow_status);
     }
-
     if (updates.length > 0) {
       params.push(id);
-      db.prepare(`UPDATE rentals SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+      await db.run(`UPDATE rentals SET ${updates.join(', ')} WHERE id = ?`, params);
     }
 
     res.json({
       success: true,
       message: `Order status updated to ${status || escrow_status}.`
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const completeReturn = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { upi_id, checklist_passed } = req.body;
+
+    const rental = await db.get(`
+      SELECT r.*, p.title as product_title
+      FROM rentals r
+      JOIN products p ON r.product_id = p.id
+      WHERE r.id = ?
+    `, [id]);
+
+    if (!rental) {
+      return res.status(404).json({ success: false, message: 'Rental order not found.' });
+    }
+
+    const refundAmount = rental.deposit_fee || 0;
+    const refundUtr = `UPI-${Math.floor(100000000000 + Math.random() * 900000000000)}`;
+
+    await db.run(`
+      UPDATE rentals
+      SET status = 'completed', escrow_status = 'deposit_refunded'
+      WHERE id = ?
+    `, [id]);
+
+    res.json({
+      success: true,
+      message: `Physical return handover confirmed! ₹${refundAmount.toLocaleString('en-IN')} escrow security deposit refunded to ${upi_id || 'aarav@okaxis'}.`,
+      refund: {
+        order_id: id,
+        product_title: rental.product_title,
+        refund_amount: refundAmount,
+        refund_utr: refundUtr,
+        upi_id: upi_id || 'aarav@okaxis',
+        escrow_status: 'deposit_refunded',
+        timestamp: new Date().toISOString()
+      }
     });
   } catch (error) {
     next(error);

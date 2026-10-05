@@ -1,123 +1,219 @@
+import pg from 'pg';
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import dotenv from 'dotenv';
 
+dotenv.config();
+
+const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dataDir = path.join(__dirname, '../../data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+// PostgreSQL connection configuration
+const connectionString = process.env.DATABASE_URL;
+const useSsl = process.env.PGSSL === 'true' || connectionString?.includes('sslmode=require');
+
+let pool = null;
+let sqliteDb = null;
+let activeClient = 'postgres'; // 'postgres' or 'sqlite'
+
+if (connectionString || process.env.PGHOST) {
+  const poolConfig = connectionString
+    ? {
+        connectionString,
+        ssl: useSsl ? { rejectUnauthorized: false } : undefined,
+        connectionTimeoutMillis: 3000,
+      }
+    : {
+        user: process.env.PGUSER || 'postgres',
+        host: process.env.PGHOST || 'localhost',
+        database: process.env.PGDATABASE || 'sharekart_db',
+        password: process.env.PGPASSWORD || 'postgres',
+        port: Number(process.env.PGPORT) || 5432,
+        ssl: useSsl ? { rejectUnauthorized: false } : undefined,
+        connectionTimeoutMillis: 3000,
+      };
+
+  pool = new Pool(poolConfig);
+
+  // Monitor pool errors
+  pool.on('error', (err) => {
+    console.error('[PostgreSQL] Unexpected pool client error:', err.message);
+  });
 }
 
-const dbPath = path.join(dataDir, 'sharekart.sqlite');
-const db = new Database(dbPath);
+// Helper to convert SQLite '?' placeholders to PostgreSQL '$1, $2, ...'
+function formatPgQuery(sql) {
+  let paramIndex = 1;
+  return sql.replace(/\?/g, () => `$${paramIndex++}`);
+}
 
-// Enable foreign keys and WAL mode for reliability
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+// Fallback SQLite initialization
+function getSqliteDb() {
+  if (!sqliteDb) {
+    const dataDir = path.join(__dirname, '../../data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    const dbPath = path.join(dataDir, 'sharekart.sqlite');
+    sqliteDb = new Database(dbPath);
+    sqliteDb.pragma('journal_mode = WAL');
+    sqliteDb.pragma('foreign_keys = ON');
+  }
+  return sqliteDb;
+}
 
-// Initialize tables
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    phone TEXT,
-    location TEXT DEFAULT 'Gandhinagar, 382010',
-    city TEXT DEFAULT 'Gandhinagar',
-    pincode TEXT DEFAULT '382010',
-    avatar_url TEXT,
-    is_aadhaar_verified INTEGER DEFAULT 1,
-    aadhaar_hash TEXT DEFAULT '#OK-82914',
-    aadhaar_number TEXT DEFAULT 'XXXX-XXXX-4819',
-    member_since TEXT DEFAULT 'Aug 2023',
-    rating REAL DEFAULT 4.9,
-    reviews_count INTEGER DEFAULT 24,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+// Unified Database Adapter
+const db = {
+  get clientType() {
+    return activeClient;
+  },
 
-  CREATE TABLE IF NOT EXISTS categories (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    icon TEXT NOT NULL,
-    item_count INTEGER DEFAULT 0
-  );
+  get pool() {
+    return pool;
+  },
 
-  CREATE TABLE IF NOT EXISTS products (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    seller_id INTEGER NOT NULL REFERENCES users(id),
-    title TEXT NOT NULL,
-    category_id TEXT NOT NULL REFERENCES categories(id),
-    subcategory TEXT,
-    description TEXT,
-    condition_tag TEXT DEFAULT 'Used - Excellent',
-    condition_score TEXT DEFAULT '9 / 10',
-    inspection_score INTEGER DEFAULT 98,
-    inspection_tested_date TEXT DEFAULT '18 Mar 2025',
-    serial_number TEXT DEFAULT 'S/N: 4729188-IN',
-    transaction_type TEXT NOT NULL, -- 'rent', 'buy', 'both'
-    rent_price_daily INTEGER DEFAULT 0,
-    rent_price_weekly INTEGER DEFAULT 0,
-    security_deposit INTEGER DEFAULT 0,
-    sale_price INTEGER DEFAULT 0,
-    original_mrp INTEGER DEFAULT 0,
-    images TEXT NOT NULL, -- JSON array
-    specs TEXT, -- JSON object
-    kit_items TEXT, -- JSON array
-    pickup_locations TEXT, -- JSON array
-    location_name TEXT DEFAULT 'Gandhinagar, Sector 7',
-    distance_km REAL DEFAULT 2.5,
-    is_instant_pickup INTEGER DEFAULT 1,
-    status TEXT DEFAULT 'active', -- 'active', 'rented', 'sold', 'paused'
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+  /**
+   * Execute raw query with parameters
+   */
+  async query(sqlText, params = []) {
+    if (activeClient === 'postgres' && pool) {
+      try {
+        const pgSql = formatPgQuery(sqlText);
+        return await pool.query(pgSql, params);
+      } catch (err) {
+        // If Postgres connection refused and haven't tried fallback yet
+        if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.code === '28P01') {
+          console.warn(`[Database] PostgreSQL error (${err.message}). Falling back to SQLite...`);
+          activeClient = 'sqlite';
+          return this.query(sqlText, params);
+        }
+        throw err;
+      }
+    } else {
+      const sqlite = getSqliteDb();
+      const trimmed = sqlText.trim().toUpperCase();
+      if (trimmed.startsWith('SELECT') || trimmed.startsWith('PRAGMA')) {
+        const rows = sqlite.prepare(sqlText).all(...params);
+        return { rows, rowCount: rows.length };
+      } else {
+        const res = sqlite.prepare(sqlText).run(...params);
+        return { rows: [], rowCount: res.changes, lastInsertRowid: res.lastInsertRowid };
+      }
+    }
+  },
 
-  CREATE TABLE IF NOT EXISTS rentals (
-    id TEXT PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id),
-    product_id INTEGER NOT NULL REFERENCES products(id),
-    order_type TEXT NOT NULL, -- 'rent' or 'buy'
-    start_date TEXT,
-    end_date TEXT,
-    total_days INTEGER DEFAULT 1,
-    rent_fee INTEGER DEFAULT 0,
-    deposit_fee INTEGER DEFAULT 0,
-    platform_fee INTEGER DEFAULT 99,
-    gst_fee INTEGER DEFAULT 18,
-    delivery_fee INTEGER DEFAULT 0,
-    total_amount INTEGER NOT NULL,
-    delivery_type TEXT DEFAULT 'pickup', -- 'pickup' or 'delivery'
-    delivery_address TEXT,
-    payment_method TEXT DEFAULT 'upi', -- 'upi', 'card', 'netbanking'
-    payment_status TEXT DEFAULT 'completed', -- 'pending', 'completed', 'failed'
-    escrow_status TEXT DEFAULT 'held_in_escrow', -- 'held_in_escrow', 'released_to_seller', 'deposit_refunded', 'disputed'
-    escrow_pin TEXT,
-    status TEXT DEFAULT 'pending_approval', -- 'pending_approval', 'active', 'completed', 'rejected', 'cancelled'
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+  /**
+   * Fetch single row
+   */
+  async get(sqlText, params = []) {
+    if (activeClient === 'postgres' && pool) {
+      try {
+        const pgSql = formatPgQuery(sqlText);
+        const res = await pool.query(pgSql, params);
+        return res.rows[0] || null;
+      } catch (err) {
+        if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.code === '28P01') {
+          console.warn(`[Database] PostgreSQL error (${err.message}). Falling back to SQLite...`);
+          activeClient = 'sqlite';
+          return this.get(sqlText, params);
+        }
+        throw err;
+      }
+    } else {
+      const sqlite = getSqliteDb();
+      return sqlite.prepare(sqlText).get(...params) || null;
+    }
+  },
 
-  CREATE TABLE IF NOT EXISTS reviews (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_id INTEGER NOT NULL REFERENCES products(id),
-    user_name TEXT NOT NULL,
-    user_avatar TEXT,
-    rating INTEGER DEFAULT 5,
-    comment TEXT,
-    rental_context TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+  /**
+   * Fetch all matching rows
+   */
+  async all(sqlText, params = []) {
+    if (activeClient === 'postgres' && pool) {
+      try {
+        const pgSql = formatPgQuery(sqlText);
+        const res = await pool.query(pgSql, params);
+        return res.rows;
+      } catch (err) {
+        if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.code === '28P01') {
+          console.warn(`[Database] PostgreSQL error (${err.message}). Falling back to SQLite...`);
+          activeClient = 'sqlite';
+          return this.all(sqlText, params);
+        }
+        throw err;
+      }
+    } else {
+      const sqlite = getSqliteDb();
+      return sqlite.prepare(sqlText).all(...params);
+    }
+  },
 
-  CREATE TABLE IF NOT EXISTS messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    sender_id INTEGER NOT NULL REFERENCES users(id),
-    receiver_id INTEGER NOT NULL REFERENCES users(id),
-    product_id INTEGER REFERENCES products(id),
-    content TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-`);
+  /**
+   * Execute INSERT, UPDATE, DELETE
+   */
+  async run(sqlText, params = []) {
+    if (activeClient === 'postgres' && pool) {
+      try {
+        let pgSql = sqlText.trim();
+        // Automatically append RETURNING id for INSERT statements if not present
+        if (pgSql.toUpperCase().startsWith('INSERT') && !pgSql.toUpperCase().includes('RETURNING')) {
+          pgSql += ' RETURNING id';
+        }
+        pgSql = formatPgQuery(pgSql);
+        const res = await pool.query(pgSql, params);
+        return {
+          changes: res.rowCount,
+          lastInsertRowid: res.rows[0]?.id || null,
+          rows: res.rows,
+        };
+      } catch (err) {
+        if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.code === '28P01') {
+          console.warn(`[Database] PostgreSQL error (${err.message}). Falling back to SQLite...`);
+          activeClient = 'sqlite';
+          return this.run(sqlText, params);
+        }
+        throw err;
+      }
+    } else {
+      const sqlite = getSqliteDb();
+      const res = sqlite.prepare(sqlText).run(...params);
+      return {
+        changes: res.changes,
+        lastInsertRowid: res.lastInsertRowid,
+        rows: [],
+      };
+    }
+  },
+
+  /**
+   * Test database connectivity
+   */
+  async testConnection() {
+    if (pool) {
+      try {
+        const client = await pool.connect();
+        const res = await client.query('SELECT NOW() as current_time, current_database() as db_name');
+        client.release();
+        console.log(`[Database] ✅ Connected to PostgreSQL database: "${res.rows[0].db_name}" at ${res.rows[0].current_time}`);
+        activeClient = 'postgres';
+        return true;
+      } catch (err) {
+        console.warn(`[Database] ⚠️  PostgreSQL is not reachable (${err.message}). Using local SQLite fallback for seamless development.`);
+        activeClient = 'sqlite';
+        return false;
+      }
+    } else {
+      activeClient = 'sqlite';
+      console.log('[Database] Using SQLite database.');
+      return false;
+    }
+  }
+};
+
+// Check connection on server boot
+db.testConnection().catch(() => {});
 
 export default db;

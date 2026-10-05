@@ -7,6 +7,7 @@ import categoryRoutes from './routes/categoryRoutes.js';
 import rentalRoutes from './routes/rentalRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
+import disputeRoutes from './routes/disputeRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -39,6 +40,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/rentals', rentalRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/disputes', disputeRoutes);
 
 // Centralized error handling
 app.use(errorHandler);

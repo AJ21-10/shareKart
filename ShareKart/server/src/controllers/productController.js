@@ -1,6 +1,7 @@
 import db from '../config/db.js';
+import { parseJson } from '../utils/helpers.js';
 
-export const getProducts = (req, res, next) => {
+export const getProducts = async (req, res, next) => {
   try {
     const {
       q,
@@ -36,7 +37,7 @@ export const getProducts = (req, res, next) => {
     }
 
     if (q && q.trim()) {
-      query += ` AND (p.title LIKE ? OR p.description LIKE ? OR p.subcategory LIKE ?)`;
+      query += ` AND (p.title ILIKE ? OR p.description ILIKE ? OR p.subcategory ILIKE ?)`;
       const searchParam = `%${q.trim()}%`;
       params.push(searchParam, searchParam, searchParam);
     }
@@ -78,7 +79,7 @@ export const getProducts = (req, res, next) => {
     }
 
     if (verifiedOnly === 'true' || verifiedOnly === '1') {
-      query += ` AND u.is_aadhaar_verified = 1`;
+      query += ` AND (u.is_aadhaar_verified = true OR u.is_aadhaar_verified = 1)`;
     }
 
     // Sorting
@@ -104,14 +105,14 @@ export const getProducts = (req, res, next) => {
     query += ` LIMIT ?`;
     params.push(Number(limit));
 
-    const rows = db.prepare(query).all(...params);
+    const rows = await db.all(query, params);
 
     const products = rows.map(p => ({
       ...p,
-      images: JSON.parse(p.images || '[]'),
-      specs: JSON.parse(p.specs || '{}'),
-      kit_items: JSON.parse(p.kit_items || '[]'),
-      pickup_locations: JSON.parse(p.pickup_locations || '[]')
+      images: parseJson(p.images, []),
+      specs: parseJson(p.specs, {}),
+      kit_items: parseJson(p.kit_items, []),
+      pickup_locations: parseJson(p.pickup_locations, [])
     }));
 
     res.json({
@@ -124,7 +125,7 @@ export const getProducts = (req, res, next) => {
   }
 };
 
-export const getProductById = (req, res, next) => {
+export const getProductById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -148,7 +149,7 @@ export const getProductById = (req, res, next) => {
       WHERE p.id = ?
     `;
 
-    const product = db.prepare(query).get(id);
+    const product = await db.get(query, [id]);
 
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found.' });
@@ -157,16 +158,16 @@ export const getProductById = (req, res, next) => {
     // Parse JSON attributes
     const formatted = {
       ...product,
-      images: JSON.parse(product.images || '[]'),
-      specs: JSON.parse(product.specs || '{}'),
-      kit_items: JSON.parse(product.kit_items || '[]'),
-      pickup_locations: JSON.parse(product.pickup_locations || '[]')
+      images: parseJson(product.images, []),
+      specs: parseJson(product.specs, {}),
+      kit_items: parseJson(product.kit_items, []),
+      pickup_locations: parseJson(product.pickup_locations, [])
     };
 
     // Fetch reviews for this product
-    const reviews = db.prepare(`
+    const reviews = await db.all(`
       SELECT * FROM reviews WHERE product_id = ? ORDER BY id DESC
-    `).all(id);
+    `, [id]);
 
     res.json({
       success: true,
@@ -178,7 +179,7 @@ export const getProductById = (req, res, next) => {
   }
 };
 
-export const createProduct = (req, res, next) => {
+export const createProduct = async (req, res, next) => {
   try {
     const seller_id = req.user.id;
     const {
@@ -212,7 +213,7 @@ export const createProduct = (req, res, next) => {
 
     const imageArray = Array.isArray(images) && images.length > 0 ? images : defaultImages;
 
-    const stmt = db.prepare(`
+    const sql = `
       INSERT INTO products (
         seller_id, title, category_id, subcategory, description,
         condition_tag, condition_score, transaction_type, rent_price_daily,
@@ -224,9 +225,10 @@ export const createProduct = (req, res, next) => {
         ?, ?, ?, ?,
         ?, ?, ?, ?, ?, ?, 'active'
       )
-    `);
+      RETURNING id
+    `;
 
-    const result = stmt.run(
+    const result = await db.run(sql, [
       seller_id,
       title,
       category_id,
@@ -246,28 +248,30 @@ export const createProduct = (req, res, next) => {
       JSON.stringify(pickup_locations || [location_name]),
       location_name,
       Number(distance_km) || 1.5
-    );
+    ]);
 
     // Increment category item count
-    db.prepare('UPDATE categories SET item_count = item_count + 1 WHERE id = ?').run(category_id);
+    await db.run('UPDATE categories SET item_count = item_count + 1 WHERE id = ?', [category_id]);
+
+    const newProductId = result.lastInsertRowid || result.rows?.[0]?.id;
 
     res.status(201).json({
       success: true,
       message: 'Product listed successfully on Sharekart!',
-      productId: result.lastInsertRowid
+      productId: newProductId
     });
   } catch (error) {
     next(error);
   }
 };
 
-export const updateProduct = (req, res, next) => {
+export const updateProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
     const { status, rent_price_daily, sale_price, security_deposit } = req.body;
 
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+    const product = await db.get('SELECT * FROM products WHERE id = ?', [id]);
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found.' });
     }
@@ -298,7 +302,7 @@ export const updateProduct = (req, res, next) => {
 
     if (updates.length > 0) {
       params.push(id);
-      db.prepare(`UPDATE products SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+      await db.run(`UPDATE products SET ${updates.join(', ')} WHERE id = ?`, params);
     }
 
     res.json({
