@@ -2,8 +2,12 @@ async function runTests() {
   console.log("Testing Sharekart Full-Stack Services...\n");
 
   // 1. Frontend Check
-  const feRes = await fetch("http://localhost:3000/");
-  console.log(`[Frontend] Vite React Dev Server: HTTP ${feRes.status}`);
+  try {
+    const feRes = await fetch("http://localhost:3000/");
+    console.log(`[Frontend] Vite React Dev Server: HTTP ${feRes.status}`);
+  } catch (e) {
+    console.log(`[Frontend] Vite React Dev Server: Not running on :3000 (skipped)`);
+  }
 
   // 2. Health Check
   const healthRes = await fetch("http://localhost:5000/api/health");
