@@ -8,11 +8,10 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "seed": "node src/seeds/seedData.js",
-    "seed:pg": "node src/seeds/seedPostgres.js"
+    "seed:pg": "node src/seeds/seedData.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^11.8.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",

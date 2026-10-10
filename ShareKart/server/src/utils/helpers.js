@@ -1,6 +1,6 @@
 /**
  * Safely parse JSON values that could either be already parsed objects (Postgres JSONB)
- * or serialized JSON strings (SQLite TEXT).
+ * or serialized JSON strings.
  */
 export const parseJson = (value, fallback = []) => {
   if (value === null || value === undefined) {
