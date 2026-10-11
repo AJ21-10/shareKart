@@ -36,6 +36,24 @@ export const api = {
     return handleResponse(res);
   },
 
+  async sendRegistrationOtp(phone) {
+    const res = await fetch(`${API_BASE}/auth/send-registration-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+    return handleResponse(res);
+  },
+
+  async verifyRegistrationOtp(phone, otp) {
+    const res = await fetch(`${API_BASE}/auth/verify-registration-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, otp })
+    });
+    return handleResponse(res);
+  },
+
   async getMe() {
     const res = await fetch(`${API_BASE}/auth/me`, {
       headers: getAuthHeaders()
@@ -174,12 +192,12 @@ export const api = {
     return handleResponse(res);
   },
 
-  // Phase 3: OTP Authentication & Aadhaar eKYC
-  async otpLogin(phone, channel = 'sms') {
+  // Authentication
+  async otpLogin(phone) {
     const res = await fetch(`${API_BASE}/auth/otp-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, channel })
+      body: JSON.stringify({ phone })
     });
     return handleResponse(res);
   },
@@ -196,6 +214,24 @@ export const api = {
   async getUserProfile(userId) {
     const res = await fetch(`${API_BASE}/auth/profile/${userId || ''}`, {
       headers: getAuthHeaders()
+    });
+    return handleResponse(res);
+  },
+
+  async updateProfile(profileData) {
+    const res = await fetch(`${API_BASE}/auth/profile`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(profileData)
+    });
+    return handleResponse(res);
+  },
+
+  async changePassword(currentPassword, newPassword) {
+    const res = await fetch(`${API_BASE}/auth/change-password`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ currentPassword, newPassword })
     });
     return handleResponse(res);
   },

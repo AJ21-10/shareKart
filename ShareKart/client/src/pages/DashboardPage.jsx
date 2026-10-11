@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
-export const DashboardPage = ({ initialTab = "overview", params = {}, onNavigate, onOpenAddProduct, onToast }) => {
+export const DashboardPage = ({ initialTab = "overview", params = {}, onNavigate, onOpenAddProduct, onOpenAadhaarVerification, onToast }) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(params?.tab || initialTab); // 'overview', 'inventory', 'contracts', 'payouts'
 
@@ -137,12 +137,31 @@ export const DashboardPage = ({ initialTab = "overview", params = {}, onNavigate
               <h1 className="font-headline-lg text-lg sm:text-headline-lg text-on-surface font-bold">
                 Seller Hub · {user?.name || "Aarav Patel"}
               </h1>
-              <span className="inline-flex items-center gap-1 sm:gap-space-4 bg-secondary-container text-on-secondary-container px-2 sm:px-space-8 py-0.5 rounded text-[10px] sm:text-badge font-badge font-bold">
-                <span className="material-symbols-outlined text-[13px] sm:text-[14px]">
-                  verified
+              {user?.is_aadhaar_verified ? (
+                <span className="inline-flex items-center gap-1 sm:gap-space-4 bg-secondary-container text-on-secondary-container px-2 sm:px-space-8 py-0.5 rounded text-[10px] sm:text-badge font-badge font-bold">
+                  <span className="material-symbols-outlined text-[13px] sm:text-[14px]">
+                    verified
+                  </span>
+                  Aadhaar Verified Merchant
                 </span>
-                Aadhaar Verified Merchant
-              </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenAadhaarVerification) {
+                      onOpenAadhaarVerification("list");
+                    } else {
+                      onNavigate("aadhaar-ekyc");
+                    }
+                  }}
+                  className="inline-flex items-center gap-1 sm:gap-space-4 bg-amber-500/15 text-amber-700 hover:bg-amber-500/25 border border-amber-500/30 px-2 sm:px-space-8 py-0.5 rounded text-[10px] sm:text-badge font-badge font-bold cursor-pointer transition shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[13px] sm:text-[14px] text-amber-600">
+                    warning
+                  </span>
+                  Aadhaar Unverified · Verify Now
+                </button>
+              )}
             </div>
             <p className="text-xs sm:text-body-sm text-on-surface-variant">
               UIDAI e-sign enforced peer rentals, Razorpay Trustee Escrow protection & UPI auto-sweeps.
@@ -152,7 +171,13 @@ export const DashboardPage = ({ initialTab = "overview", params = {}, onNavigate
           {/* Top Actions */}
           <div className="flex items-center gap-2 sm:gap-space-12 self-stretch sm:self-auto flex-wrap sm:flex-nowrap">
             <button
-              onClick={() => onNavigate("aadhaar-ekyc")}
+              onClick={() => {
+                if (!user?.is_aadhaar_verified && onOpenAadhaarVerification) {
+                  onOpenAadhaarVerification("list");
+                } else {
+                  onNavigate("aadhaar-ekyc");
+                }
+              }}
               className="px-3 py-1.5 rounded-lg border border-secondary text-secondary hover:bg-secondary-container/40 text-xs font-label-bold flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">badge</span>

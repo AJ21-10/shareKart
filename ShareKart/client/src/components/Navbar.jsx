@@ -1,20 +1,40 @@
-import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useCart } from '../context/CartContext';
-import { LocationModal } from './LocationModal';
+import React, { useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
+import { LocationModal } from "./LocationModal";
 
-export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenAddProduct, activePage, onToast }) => {
-  const { user, currentLocation, isAuthenticated, logout, switchDemoUser, demoAccounts } = useAuth();
+export const Navbar = ({
+  onNavigate,
+  onOpenAuth,
+  onOpenCart,
+  onOpenChat,
+  onOpenAddProduct,
+  onOpenEditProfile,
+  onOpenAadhaarVerification,
+  activePage,
+  onToast,
+}) => {
+  const {
+    user,
+    currentLocation,
+    isAuthenticated,
+    logout,
+    switchDemoUser,
+    demoAccounts,
+  } = useAuth();
   const { cartCount } = useCart();
-  const [searchCategory, setSearchCategory] = useState('All Categories');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchCategory, setSearchCategory] = useState("All Categories");
+  const [searchQuery, setSearchQuery] = useState("");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    onNavigate('search', { q: searchQuery, category: searchCategory !== 'All Categories' ? searchCategory : '' });
+    onNavigate("search", {
+      q: searchQuery,
+      category: searchCategory !== "All Categories" ? searchCategory : "",
+    });
     setMobileSearchOpen(false);
   };
 
@@ -27,7 +47,7 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
             {/* Logo & City Selector */}
             <div className="flex items-center gap-2 sm:gap-space-12 shrink-0">
               <button
-                onClick={() => onNavigate('home')}
+                onClick={() => onNavigate("home")}
                 className="flex items-center gap-1.5 sm:gap-space-8 text-left cursor-pointer focus:outline-none"
               >
                 <img
@@ -35,7 +55,8 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
                   className="h-8 sm:h-9 w-auto object-contain"
                   src="/sharekart-logo.png"
                   onError={(e) => {
-                    e.target.src = "https://lh3.googleusercontent.com/aida/AEtjO1VhknTFZdm6xFcIukdmwyVIWdYl6qKlsxXZSCfQsg80lqAgh7pP_2Ry-dxw0_5YUvkR841K_qebczNRSc9U0R5HNzr1LDHC4shNDN5anQzx-RVhORkDXnmcZX8JRhh7UJyAjUqfWNLItx1D5TCn76BqWKaa2eEgoiRUYJM-bvLqCDw0PL1GNSHDjfc88rcqrRdo7ZarUKtUM4tVEHywAXiBgA4ASG8-sTeMwjYAboXgOHOnVBJUo0VLYQmY";
+                    e.target.src =
+                      "https://lh3.googleusercontent.com/aida/AEtjO1VhknTFZdm6xFcIukdmwyVIWdYl6qKlsxXZSCfQsg80lqAgh7pP_2Ry-dxw0_5YUvkR841K_qebczNRSc9U0R5HNzr1LDHC4shNDN5anQzx-RVhORkDXnmcZX8JRhh7UJyAjUqfWNLItx1D5TCn76BqWKaa2eEgoiRUYJM-bvLqCDw0PL1GNSHDjfc88rcqrRdo7ZarUKtUM4tVEHywAXiBgA4ASG8-sTeMwjYAboXgOHOnVBJUo0VLYQmY";
                   }}
                 />
               </button>
@@ -47,13 +68,17 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
                 title="Change location & discover nearby hubs in real time"
               >
                 <div className="relative flex items-center">
-                  <span className="material-symbols-outlined text-[15px] sm:text-[17px] text-secondary-fixed group-hover:scale-110 transition-transform">location_on</span>
+                  <span className="material-symbols-outlined text-[15px] sm:text-[17px] text-secondary-fixed group-hover:scale-110 transition-transform">
+                    location_on
+                  </span>
                   <span className="w-1.5 h-1.5 rounded-full bg-secondary-fixed absolute -top-0.5 -right-0.5 animate-pulse"></span>
                 </div>
                 <span className="font-label-bold text-[11px] sm:text-label-bold text-on-primary max-w-[90px] xs:max-w-[120px] sm:max-w-[140px] truncate">
-                  {currentLocation || user?.location || 'Gandhinagar'}
+                  {currentLocation || user?.location || "Gandhinagar"}
                 </span>
-                <span className="material-symbols-outlined text-[14px] sm:text-[16px] text-on-surface-variant group-hover:text-on-primary transition-colors">keyboard_arrow_down</span>
+                <span className="material-symbols-outlined text-[14px] sm:text-[16px] text-on-surface-variant group-hover:text-on-primary transition-colors">
+                  keyboard_arrow_down
+                </span>
               </button>
             </div>
 
@@ -87,7 +112,9 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
                 type="submit"
                 className="bg-primary text-on-primary px-space-16 py-space-8 flex items-center justify-center hover:bg-inverse-surface transition-colors"
               >
-                <span className="material-symbols-outlined text-[20px]">search</span>
+                <span className="material-symbols-outlined text-[20px]">
+                  search
+                </span>
               </button>
             </form>
 
@@ -101,7 +128,7 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
                 aria-label="Toggle Search"
               >
                 <span className="material-symbols-outlined text-[22px]">
-                  {mobileSearchOpen ? 'close' : 'search'}
+                  {mobileSearchOpen ? "close" : "search"}
                 </span>
               </button>
 
@@ -109,12 +136,15 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
               <button
                 onClick={onOpenAddProduct}
                 className={`hidden sm:flex items-center gap-space-4 px-space-12 py-space-6 rounded font-label-bold text-label-bold transition-all shadow-xs cursor-pointer ${
-                  activePage === 'list-item' || activePage === 'sharekart_list_an_item_for_rent_or_sale'
-                    ? 'bg-secondary-container text-on-secondary-container ring-2 ring-secondary'
-                    : 'bg-secondary text-on-secondary hover:bg-secondary-container hover:text-on-secondary-container'
+                  activePage === "list-item" ||
+                  activePage === "sharekart_list_an_item_for_rent_or_sale"
+                    ? "bg-secondary-container text-on-secondary-container ring-2 ring-secondary"
+                    : "bg-secondary text-on-secondary hover:bg-secondary-container hover:text-on-secondary-container"
                 }`}
               >
-                <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                <span className="material-symbols-outlined text-[18px]">
+                  add_circle
+                </span>
                 <span>Sell / Rent</span>
               </button>
 
@@ -123,22 +153,30 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
                 <button
                   onClick={onOpenChat}
                   className={`relative p-1.5 sm:p-space-6 hover:text-secondary-fixed transition-colors cursor-pointer ${
-                    activePage === 'chat' || activePage === 'sharekart_p2p_chat_neighborhood_coordination' ? 'text-secondary-fixed' : ''
+                    activePage === "chat" ||
+                    activePage ===
+                      "sharekart_p2p_chat_neighborhood_coordination"
+                      ? "text-secondary-fixed"
+                      : ""
                   }`}
                   title="Messages"
                   aria-label="Messages"
                 >
-                  <span className="material-symbols-outlined text-[20px] sm:text-[22px]">forum</span>
+                  <span className="material-symbols-outlined text-[20px] sm:text-[22px]">
+                    forum
+                  </span>
                   <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
                 </button>
 
                 <button
-                  onClick={() => onNavigate('orders')}
+                  onClick={() => onNavigate("orders")}
                   className="relative p-1.5 sm:p-space-6 hover:text-secondary-fixed transition-colors hidden md:inline-block"
                   title="My Orders & Rentals"
                   aria-label="My Orders"
                 >
-                  <span className="material-symbols-outlined text-[22px]">receipt_long</span>
+                  <span className="material-symbols-outlined text-[22px]">
+                    receipt_long
+                  </span>
                 </button>
 
                 <button
@@ -147,7 +185,9 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
                   title="Cart"
                   aria-label="Cart"
                 >
-                  <span className="material-symbols-outlined text-[20px] sm:text-[22px]">shopping_bag</span>
+                  <span className="material-symbols-outlined text-[20px] sm:text-[22px]">
+                    shopping_bag
+                  </span>
                   {cartCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-secondary text-on-secondary text-[10px] sm:text-badge font-badge rounded-full px-1.5 py-0.5 leading-none">
                       {cartCount}
@@ -161,7 +201,9 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
                 {isAuthenticated ? (
                   <div>
                     <button
-                      onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                      onClick={() =>
+                        setProfileDropdownOpen(!profileDropdownOpen)
+                      }
                       className="flex items-center gap-1 sm:gap-space-8 text-left focus:outline-none"
                       aria-label="User Profile"
                     >
@@ -169,20 +211,40 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
                         <img
                           alt="Profile"
                           className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border border-secondary-fixed"
-                          src={user?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"}
+                          src={
+                            user?.avatar_url ||
+                            "https://api.dicebear.com/7.x/bottts/svg?seed=User&backgroundColor=b6e3f4"
+                          }
                         />
-                        <span className="material-symbols-outlined absolute -bottom-1 -right-1 text-[11px] sm:text-[12px] bg-secondary-container text-on-secondary-container rounded-full p-0.5">
-                          verified
-                        </span>
+                        {user?.is_aadhaar_verified ? (
+                          <span className="material-symbols-outlined absolute -bottom-1 -right-1 text-[11px] sm:text-[12px] bg-secondary-container text-on-secondary-container rounded-full p-0.5">
+                            verified
+                          </span>
+                        ) : (
+                          <span className="material-symbols-outlined absolute -bottom-1 -right-1 text-[11px] sm:text-[12px] bg-amber-500 text-slate-950 font-bold rounded-full p-0.5">
+                            priority_high
+                          </span>
+                        )}
                       </div>
                       <div className="hidden lg:flex flex-col">
                         <span className="font-label-bold text-label-bold text-on-primary leading-none">
-                          {user?.name || 'Aarav Patel'}
+                          {user?.name || "Aarav Patel"}
                         </span>
-                        <span className="font-badge text-badge text-secondary-fixed leading-tight mt-0.5 flex items-center gap-0.5">
-                          <span className="material-symbols-outlined text-[11px]">check_circle</span>
-                          Aadhaar Verified
-                        </span>
+                        {user?.is_aadhaar_verified ? (
+                          <span className="font-badge text-badge text-secondary-fixed leading-tight mt-0.5 flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[11px]">
+                              check_circle
+                            </span>
+                            Aadhaar Verified
+                          </span>
+                        ) : (
+                          <span className="font-badge text-badge text-amber-300 leading-tight mt-0.5 flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[11px]">
+                              warning
+                            </span>
+                            Unverified
+                          </span>
+                        )}
                       </div>
                     </button>
 
@@ -190,125 +252,217 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
                     {profileDropdownOpen && (
                       <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant py-2 z-50 text-on-surface">
                         <div className="px-4 py-2 border-b border-outline-variant">
-                          <p className="font-label-bold text-on-surface">{user?.name}</p>
-                          <p className="text-xs text-on-surface-variant font-mono truncate">{user?.email}</p>
-                          <span className="inline-flex items-center gap-1 text-[11px] text-secondary font-bold mt-1">
-                            <span className="material-symbols-outlined text-[12px]">verified</span>
-                            UIDAI Hash: {user?.aadhaar_hash || '#OK-82914'}
-                          </span>
+                          <p className="font-label-bold text-on-surface">
+                            {user?.name}
+                          </p>
+                          <p className="text-xs text-on-surface-variant font-mono truncate">
+                            {user?.email}
+                          </p>
+                          {user?.is_aadhaar_verified ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-secondary font-bold mt-1">
+                              <span className="material-symbols-outlined text-[12px]">
+                                verified
+                              </span>
+                              UIDAI Hash: {user?.aadhaar_hash || "#OK-82914"}
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setProfileDropdownOpen(false);
+                                if (onOpenAadhaarVerification) {
+                                  onOpenAadhaarVerification("general");
+                                } else {
+                                  onNavigate("aadhaar-ekyc");
+                                }
+                              }}
+                              className="mt-1.5 w-full inline-flex items-center justify-center gap-1 text-[11px] bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 font-bold px-2 py-1 rounded-md border border-amber-500/30 transition text-left cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-[12px] text-amber-600">
+                                shield_person
+                              </span>
+                              Verify Aadhaar to Rent & Sell
+                            </button>
+                          )}
                         </div>
+
+                        {/* Profile Option */}
+                        <button
+                          onClick={() => {
+                            setProfileDropdownOpen(false);
+                            onNavigate("profile");
+                          }}
+                          className="w-full px-4 py-2 text-left text-body-sm hover:bg-primary/5 flex items-center justify-between font-label-bold text-primary cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[18px]">
+                              account_circle
+                            </span>
+                            <span>Profile</span>
+                          </div>
+                          <span className="material-symbols-outlined text-[16px] text-on-surface-variant">
+                            chevron_right
+                          </span>
+                        </button>
+
+                        {/* Change Password Option */}
+                        {/* <button
+                          onClick={() => {
+                            setProfileDropdownOpen(false);
+                            onNavigate("profile", { tab: "security" });
+                          }}
+                          className="w-full px-4 py-2 text-left text-body-sm hover:bg-primary/5 flex items-center justify-between font-label-bold text-on-surface border-b border-outline-variant/40 cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[18px] text-on-surface-variant">
+                              lock_reset
+                            </span>
+                            <span>Change Password</span>
+                          </div>
+                          <span className="material-symbols-outlined text-[16px] text-on-surface-variant">
+                            chevron_right
+                          </span>
+                        </button> */}
 
                         <button
                           onClick={() => {
                             setProfileDropdownOpen(false);
-                            onNavigate('dashboard');
+                            onNavigate("dashboard");
                           }}
                           className="w-full px-4 py-2 text-left text-body-sm hover:bg-surface-container flex items-center justify-between font-label-bold text-secondary"
                         >
                           <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[18px]">dashboard</span>
+                            <span className="material-symbols-outlined text-[18px]">
+                              dashboard
+                            </span>
                             <span>Seller / Lender Hub</span>
                           </div>
-                          <span className="text-[10px] bg-secondary/15 text-secondary px-1.5 py-0.5 rounded font-bold">PRO</span>
                         </button>
 
-                        <div className="pl-7 pr-4 py-1 flex flex-col gap-0.5 text-xs text-on-surface-variant">
+                        {/* <div className="pl-7 pr-4 py-1 flex flex-col gap-0.5 text-xs text-on-surface-variant">
                           <button
                             onClick={() => {
                               setProfileDropdownOpen(false);
-                              onNavigate('inventory');
+                              onNavigate("inventory");
                             }}
                             className="text-left py-1 hover:text-primary flex items-center gap-1.5"
                           >
-                            <span className="material-symbols-outlined text-[14px]">inventory_2</span>
+                            <span className="material-symbols-outlined text-[14px]">
+                              inventory_2
+                            </span>
                             <span>My Inventory & Listings</span>
                           </button>
                           <button
                             onClick={() => {
                               setProfileDropdownOpen(false);
-                              onNavigate('contracts');
+                              onNavigate("contracts");
                             }}
                             className="text-left py-1 hover:text-primary flex items-center gap-1.5"
                           >
-                            <span className="material-symbols-outlined text-[14px]">history_edu</span>
+                            <span className="material-symbols-outlined text-[14px]">
+                              history_edu
+                            </span>
                             <span>Rental Contracts & Escrow</span>
                           </button>
                           <button
                             onClick={() => {
                               setProfileDropdownOpen(false);
-                              onNavigate('payouts');
+                              onNavigate("payouts");
                             }}
                             className="text-left py-1 hover:text-primary flex items-center gap-1.5"
                           >
-                            <span className="material-symbols-outlined text-[14px]">account_balance_wallet</span>
+                            <span className="material-symbols-outlined text-[14px]">
+                              account_balance_wallet
+                            </span>
                             <span>Escrow & UPI Payouts</span>
                           </button>
-                        </div>
+                        </div> */}
+
+                        {/* <button
+                          onClick={() => {
+                            setProfileDropdownOpen(false);
+                            if (!user?.is_aadhaar_verified && onOpenAadhaarVerification) {
+                              onOpenAadhaarVerification("general");
+                            } else {
+                              onNavigate("aadhaar-ekyc");
+                            }
+                          }}
+                          className="w-full px-4 py-2 text-left text-body-sm hover:bg-surface-container flex items-center justify-between cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[18px] text-secondary">
+                              verified_user
+                            </span>
+                            <span>UIDAI Aadhaar eKYC</span>
+                          </div>
+                          {user?.is_aadhaar_verified ? (
+                            <span className="text-[10px] bg-secondary-container text-on-secondary-container px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5">
+                              <span className="material-symbols-outlined text-[10px]">check</span> Verified
+                            </span>
+                          ) : (
+                            <span className="text-[10px] bg-amber-500/20 text-amber-700 border border-amber-500/30 px-1.5 py-0.5 rounded font-bold">
+                              Required
+                            </span>
+                          )}
+                        </button> */}
 
                         <button
                           onClick={() => {
                             setProfileDropdownOpen(false);
-                            onNavigate('profile');
+                            onNavigate("disputes");
                           }}
                           className="w-full px-4 py-2 text-left text-body-sm hover:bg-surface-container flex items-center gap-2"
                         >
-                          <span className="material-symbols-outlined text-[18px]">badge</span>
-                          <span>Public Trust Profile</span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setProfileDropdownOpen(false);
-                            onNavigate('aadhaar-ekyc');
-                          }}
-                          className="w-full px-4 py-2 text-left text-body-sm hover:bg-surface-container flex items-center gap-2"
-                        >
-                          <span className="material-symbols-outlined text-[18px] text-secondary">verified_user</span>
-                          <span>UIDAI Aadhaar eKYC</span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setProfileDropdownOpen(false);
-                            onNavigate('disputes');
-                          }}
-                          className="w-full px-4 py-2 text-left text-body-sm hover:bg-surface-container flex items-center gap-2"
-                        >
-                          <span className="material-symbols-outlined text-[18px] text-error">gavel</span>
+                          <span className="material-symbols-outlined text-[18px] text-error">
+                            gavel
+                          </span>
                           <span>Mediation Desk</span>
                         </button>
 
                         <button
                           onClick={() => {
                             setProfileDropdownOpen(false);
-                            onNavigate('orders');
+                            onNavigate("orders");
                           }}
                           className="w-full px-4 py-2 text-left text-body-sm hover:bg-surface-container flex items-center gap-2"
                         >
-                          <span className="material-symbols-outlined text-[18px]">receipt_long</span>
+                          <span className="material-symbols-outlined text-[18px]">
+                            receipt_long
+                          </span>
                           <span>My Orders & Bookings</span>
                         </button>
 
                         {/* Demo Persona Switcher */}
-                        <div className="border-t border-outline-variant px-4 py-2 bg-surface-container-low/50">
-                          <p className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Switch Persona</p>
+                        {/* <div className="border-t border-outline-variant px-4 py-2 bg-surface-container-low/50">
+                          <p className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+                            Switch Persona
+                          </p>
                           <div className="flex flex-col gap-1">
-                            {demoAccounts.map(demo => (
+                            {demoAccounts.map((demo) => (
                               <button
                                 key={demo.id}
                                 onClick={() => {
                                   switchDemoUser(demo);
                                   setProfileDropdownOpen(false);
                                 }}
-                                className={`text-xs text-left px-2 py-1 rounded flex items-center justify-between ${user?.id === demo.id ? 'bg-secondary text-on-secondary font-bold' : 'hover:bg-surface-container'
-                                  }`}
+                                className={`text-xs text-left px-2 py-1 rounded flex items-center justify-between ${
+                                  user?.id === demo.id
+                                    ? "bg-secondary text-on-secondary font-bold"
+                                    : "hover:bg-surface-container"
+                                }`}
                               >
                                 <span>{demo.name}</span>
-                                <span className="text-[10px] opacity-80">{demo.id === 1 ? 'Seller' : demo.id === 2 ? 'Lender' : 'Renter'}</span>
+                                <span className="text-[10px] opacity-80">
+                                  {demo.id === 1
+                                    ? "Seller"
+                                    : demo.id === 2
+                                      ? "Lender"
+                                      : "Renter"}
+                                </span>
                               </button>
                             ))}
                           </div>
-                        </div>
+                        </div> */}
 
                         <div className="border-t border-outline-variant pt-1">
                           <button
@@ -318,7 +472,9 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
                             }}
                             className="w-full px-4 py-2 text-left text-body-sm text-error hover:bg-error-container/20 flex items-center gap-2"
                           >
-                            <span className="material-symbols-outlined text-[18px]">logout</span>
+                            <span className="material-symbols-outlined text-[18px]">
+                              logout
+                            </span>
                             <span>Sign Out</span>
                           </button>
                         </div>
@@ -326,12 +482,20 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
                     )}
                   </div>
                 ) : (
-                  <button
-                    onClick={onOpenAuth}
-                    className="bg-primary text-on-primary px-2.5 sm:px-space-12 py-1 sm:py-space-6 rounded text-xs sm:text-body-sm font-label-bold hover:bg-inverse-surface transition-colors"
-                  >
-                    Sign In
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={onOpenAuth}
+                      className="bg-primary text-on-primary px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-xs sm:text-body-sm font-label-bold hover:bg-inverse-surface transition-colors cursor-pointer"
+                    >
+                      Sign In
+                    </button>
+                    <button
+                      onClick={() => onNavigate("register")}
+                      className="hidden sm:inline-flex bg-secondary text-on-secondary px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-xs sm:text-body-sm font-label-bold hover:bg-secondary/90 transition-colors cursor-pointer"
+                    >
+                      Register
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -369,7 +533,9 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
                 type="submit"
                 className="bg-primary text-on-primary px-3 py-2 flex items-center justify-center hover:bg-inverse-surface"
               >
-                <span className="material-symbols-outlined text-[18px]">search</span>
+                <span className="material-symbols-outlined text-[18px]">
+                  search
+                </span>
               </button>
             </form>
           )}
@@ -377,26 +543,27 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
           {/* Categories Bar Navigation */}
           <nav className="flex items-center gap-1.5 sm:gap-space-8 overflow-x-auto pb-1 text-xs sm:text-body-sm font-body-sm scrollbar-none -mx-1 px-1">
             <button
-              onClick={() => onNavigate('home')}
-              className={`whitespace-nowrap px-2.5 sm:px-space-8 py-1 sm:py-space-2 rounded transition-colors ${activePage === 'home'
-                ? 'bg-surface text-on-surface font-label-bold shadow-xs'
-                : 'text-on-primary hover:text-secondary-fixed'
-                }`}
+              onClick={() => onNavigate("home")}
+              className={`whitespace-nowrap px-2.5 sm:px-space-8 py-1 sm:py-space-2 rounded transition-colors ${
+                activePage === "home"
+                  ? "bg-surface text-on-surface font-label-bold shadow-xs"
+                  : "text-on-primary hover:text-secondary-fixed"
+              }`}
             >
               All Categories
             </button>
             {[
-              { id: 'laptops-mobiles', label: 'Laptops & Mobiles' },
-              { id: 'home-furniture', label: 'Home Furniture' },
-              { id: 'power-tools-machinery', label: 'Power Tools' },
-              { id: 'cameras-audio', label: 'Cameras & Audio' },
-              { id: 'bikes-cycles', label: 'Bikes & Cycles' },
-              { id: 'home-appliances', label: 'Home Appliances' },
-              { id: 'books-sports', label: 'Books & Sports' }
-            ].map(cat => (
+              { id: "laptops-mobiles", label: "Laptops & Mobiles" },
+              { id: "home-furniture", label: "Home Furniture" },
+              { id: "power-tools-machinery", label: "Power Tools" },
+              { id: "cameras-audio", label: "Cameras & Audio" },
+              { id: "bikes-cycles", label: "Bikes & Cycles" },
+              { id: "home-appliances", label: "Home Appliances" },
+              { id: "books-sports", label: "Books & Sports" },
+            ].map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => onNavigate('search', { category: cat.id })}
+                onClick={() => onNavigate("search", { category: cat.id })}
                 className="whitespace-nowrap px-2 sm:px-space-8 py-1 sm:py-space-2 rounded text-on-primary hover:text-secondary-fixed transition-colors"
               >
                 {cat.label}
@@ -405,24 +572,30 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
 
             <div className="hidden sm:flex items-center gap-1.5 ml-auto pl-2 border-l border-outline/30 shrink-0">
               <button
-                onClick={() => onNavigate('dashboard')}
+                onClick={() => onNavigate("dashboard")}
                 className="whitespace-nowrap px-2 py-0.5 rounded text-[11px] font-bold text-secondary-fixed bg-primary/40 hover:bg-primary/70 transition-colors flex items-center gap-1"
               >
-                <span className="material-symbols-outlined text-[13px]">dashboard</span>
+                <span className="material-symbols-outlined text-[13px]">
+                  dashboard
+                </span>
                 Seller Hub
               </button>
-              <button
-                onClick={() => onNavigate('aadhaar-ekyc')}
+              {/* <button
+                onClick={() => onNavigate("aadhaar-ekyc")}
                 className="whitespace-nowrap px-2 py-0.5 rounded text-[11px] font-bold text-secondary-fixed bg-primary/40 hover:bg-primary/70 transition-colors flex items-center gap-1"
               >
-                <span className="material-symbols-outlined text-[13px]">verified_user</span>
+                <span className="material-symbols-outlined text-[13px]">
+                  verified_user
+                </span>
                 eKYC
-              </button>
+              </button> */}
               <button
-                onClick={() => onNavigate('disputes')}
+                onClick={() => onNavigate("disputes")}
                 className="whitespace-nowrap px-2 py-0.5 rounded text-[11px] font-bold text-on-primary/80 hover:text-on-primary hover:bg-primary/50 transition-colors flex items-center gap-1"
               >
-                <span className="material-symbols-outlined text-[13px]">gavel</span>
+                <span className="material-symbols-outlined text-[13px]">
+                  gavel
+                </span>
                 Mediation
               </button>
             </div>
@@ -440,9 +613,11 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
       {/* Mobile Fixed Bottom Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-primary-container/95 backdrop-blur-md border-t border-outline/25 shadow-[0_-2px_12px_rgba(0,0,0,0.18)] px-2 py-1.5 flex items-center justify-around text-on-primary">
         <button
-          onClick={() => onNavigate('home')}
+          onClick={() => onNavigate("home")}
           className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded transition-colors ${
-            activePage === 'home' ? 'text-secondary-fixed font-bold' : 'text-on-primary/80 hover:text-on-primary'
+            activePage === "home"
+              ? "text-secondary-fixed font-bold"
+              : "text-on-primary/80 hover:text-on-primary"
           }`}
         >
           <span className="material-symbols-outlined text-[22px]">home</span>
@@ -450,9 +625,11 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
         </button>
 
         <button
-          onClick={() => onNavigate('search')}
+          onClick={() => onNavigate("search")}
           className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded transition-colors ${
-            activePage === 'search' ? 'text-secondary-fixed font-bold' : 'text-on-primary/80 hover:text-on-primary'
+            activePage === "search"
+              ? "text-secondary-fixed font-bold"
+              : "text-on-primary/80 hover:text-on-primary"
           }`}
         >
           <span className="material-symbols-outlined text-[22px]">search</span>
@@ -468,16 +645,22 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
           <div className="w-11 h-11 rounded-full bg-secondary text-on-secondary flex items-center justify-center shadow-lg border-2 border-primary-container group-hover:scale-105 group-active:scale-95 transition-transform">
             <span className="material-symbols-outlined text-[24px]">add</span>
           </div>
-          <span className="text-[10px] font-bold text-secondary-fixed mt-0.5 leading-tight">Sell/Rent</span>
+          <span className="text-[10px] font-bold text-secondary-fixed mt-0.5 leading-tight">
+            Sell/Rent
+          </span>
         </button>
 
         <button
-          onClick={() => onNavigate('orders')}
+          onClick={() => onNavigate("orders")}
           className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded transition-colors ${
-            activePage === 'orders' ? 'text-secondary-fixed font-bold' : 'text-on-primary/80 hover:text-on-primary'
+            activePage === "orders"
+              ? "text-secondary-fixed font-bold"
+              : "text-on-primary/80 hover:text-on-primary"
           }`}
         >
-          <span className="material-symbols-outlined text-[22px]">receipt_long</span>
+          <span className="material-symbols-outlined text-[22px]">
+            receipt_long
+          </span>
           <span className="text-[10px] leading-tight">Orders</span>
         </button>
 
@@ -485,7 +668,9 @@ export const Navbar = ({ onNavigate, onOpenAuth, onOpenCart, onOpenChat, onOpenA
           onClick={onOpenCart}
           className="relative flex flex-col items-center gap-0.5 px-2 py-1 rounded text-on-primary/80 hover:text-on-primary transition-colors"
         >
-          <span className="material-symbols-outlined text-[22px]">shopping_bag</span>
+          <span className="material-symbols-outlined text-[22px]">
+            shopping_bag
+          </span>
           {cartCount > 0 && (
             <span className="absolute top-0.5 right-2 bg-secondary text-on-secondary text-[10px] font-bold rounded-full px-1 py-0 leading-none">
               {cartCount}

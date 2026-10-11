@@ -78,8 +78,8 @@ export const getProducts = async (req, res, next) => {
       params.push(Number(maxDistance));
     }
 
-    if (verifiedOnly === 'true' || verifiedOnly === '1') {
-      query += ` AND (u.is_aadhaar_verified = true OR u.is_aadhaar_verified = 1)`;
+    if (verifiedOnly === 'true' || verifiedOnly === '1' || verifiedOnly === true) {
+      query += ` AND u.is_aadhaar_verified = true`;
     }
 
     // Sorting
@@ -182,6 +182,12 @@ export const getProductById = async (req, res, next) => {
 export const createProduct = async (req, res, next) => {
   try {
     const seller_id = req.user.id;
+    if (!req.user.is_aadhaar_verified) {
+      return res.status(403).json({
+        success: false,
+        message: 'Aadhaar verification is required to list products. Please verify your Aadhaar to continue.'
+      });
+    }
     const {
       title,
       category_id,

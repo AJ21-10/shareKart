@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-export const CheckoutPage = ({ params = {}, onNavigate, onToast }) => {
+export const CheckoutPage = ({ params = {}, onNavigate, onOpenAadhaarVerification, onToast }) => {
   const { user } = useAuth();
   const { productId = 1, orderType = 'rent', days = 3, startDate = '2025-10-24', endDate = '2025-10-27' } = params;
 
@@ -57,6 +57,19 @@ export const CheckoutPage = ({ params = {}, onNavigate, onToast }) => {
   };
 
   const handleTriggerPayment = async () => {
+    if (!user) {
+      onNavigate('login');
+      return;
+    }
+    if (!user.is_aadhaar_verified) {
+      if (onOpenAadhaarVerification) {
+        onOpenAadhaarVerification('buy', () => handleTriggerPayment());
+      } else {
+        onNavigate('aadhaar-ekyc');
+      }
+      return;
+    }
+
     setPaying(true);
 
     try {
@@ -80,6 +93,14 @@ export const CheckoutPage = ({ params = {}, onNavigate, onToast }) => {
       }
     } catch (err) {
       console.error('Payment checkout failed', err);
+      if (err.message && err.message.toLowerCase().includes('aadhaar')) {
+        if (onOpenAadhaarVerification) {
+          onOpenAadhaarVerification('buy');
+        } else {
+          alert(err.message);
+        }
+        return;
+      }
       alert(err.message || 'Payment simulation failed');
     } finally {
       setPaying(false);
@@ -101,6 +122,39 @@ export const CheckoutPage = ({ params = {}, onNavigate, onToast }) => {
 
   return (
     <div className="w-full flex flex-col gap-space-16 pb-space-32">
+      {/* Aadhaar Verification Alert if unverified */}
+      {!user?.is_aadhaar_verified && (
+        <div className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs mb-space-8">
+          <div className="flex items-start gap-2.5">
+            <span className="material-symbols-outlined text-[22px] text-amber-600 shrink-0 mt-0.5">
+              shield_person
+            </span>
+            <div>
+              <p className="font-bold text-slate-900 text-sm">
+                Aadhaar Verification Required for Escrow Booking
+              </p>
+              <p className="text-on-surface-variant mt-0.5">
+                To guarantee physical item safety and escrow deposit security, all renters & buyers must verify their Aadhaar identity before making payments.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenAadhaarVerification) {
+                onOpenAadhaarVerification('buy');
+              } else {
+                onNavigate('aadhaar-ekyc');
+              }
+            }}
+            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 rounded-lg shrink-0 flex items-center justify-center gap-1.5 transition cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">verified</span>
+            <span>Verify Aadhaar Now</span>
+          </button>
+        </div>
+      )}
+
       {/* Progress Stepper */}
       <div className="w-full bg-surface-container-lowest rounded-xl p-3.5 sm:p-space-16 border border-outline-variant/60 shadow-sm mb-space-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-space-16">
