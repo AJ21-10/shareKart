@@ -122,10 +122,17 @@ export const ProductCard = ({ product, onSelectProduct, onQuickRent, onQuickBuy,
           </div>
 
           <div className="flex items-center justify-between text-[11px] sm:text-xs">
-            <span className="flex items-center gap-1 text-secondary font-medium">
-              <span className="material-symbols-outlined text-[12px] sm:text-[13px]">check_circle</span>
-              <span className="hidden xs:inline">Aadhaar</span> Verified
-            </span>
+            {product.seller_is_verified ? (
+              <span className="flex items-center gap-1 text-secondary font-medium">
+                <span className="material-symbols-outlined text-[12px] sm:text-[13px]">check_circle</span>
+                <span className="hidden xs:inline">Aadhaar</span> Verified
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-on-surface-variant font-medium">
+                <span className="material-symbols-outlined text-[12px] sm:text-[13px]">shield</span>
+                <span className="hidden xs:inline">Community</span> Host
+              </span>
+            )}
             {isRent && onQuickRent ? (
               <button
                 type="button"

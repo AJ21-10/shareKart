@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
@@ -7,6 +7,7 @@ import { AuthModal } from "./components/AuthModal";
 import { CartDrawer } from "./components/CartDrawer";
 import { ChatModal } from "./components/ChatModal";
 import { AddProductModal } from "./components/AddProductModal";
+import { AadhaarPromptModal } from "./components/AadhaarPromptModal";
 import { Toast } from "./components/Toast";
 
 // Existing Pages
@@ -25,15 +26,25 @@ import { HandoverPassPage } from "./pages/HandoverPassPage";
 // Phase 3 Pages & Modals
 import { AadhaarKycPage } from "./pages/AadhaarKycPage";
 import { DisputeMediationPage } from "./pages/DisputeMediationPage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { PublicTrustProfilePage } from "./pages/PublicTrustProfilePage";
 import { ReturnHandoverPage } from "./pages/ReturnHandoverPage";
 import { QuickRentModal } from "./components/QuickRentModal";
+
+// Dedicated Full-Page Auth
+import { AuthPage } from "./pages/AuthPage";
 
 const resolveRoute = () => {
   const pathname = window.location.pathname.replace(/^\/+|\/+$/g, "");
   const hash = window.location.hash.replace(/^#\/?/, "");
   const path = pathname || hash;
 
+  if (path === "login" || path === "signin" || path === "auth") {
+    return { page: "login", params: {} };
+  }
+  if (path === "register" || path === "signup") {
+    return { page: "register", params: {} };
+  }
   if (path === "list-item" || path === "post-listing") {
     return { page: "list-item", params: {} };
   }
@@ -72,12 +83,15 @@ const resolveRoute = () => {
   if (path === "disputes" || path === "mediation" || path === "arbitration") {
     return { page: "disputes", params: {} };
   }
-  if (
-    path === "profile" ||
-    path === "trust-profile" ||
-    path === "seller-profile"
-  ) {
+  if (path === "profile" || path === "my-profile") {
     return { page: "profile", params: {} };
+  }
+  if (
+    path === "trust-profile" ||
+    path === "seller-profile" ||
+    path === "public-profile"
+  ) {
+    return { page: "trust-profile", params: {} };
   }
   if (
     path === "return-pass" ||
@@ -99,6 +113,7 @@ const resolveRoute = () => {
 };
 
 export function AppContent() {
+  const { user } = useAuth();
   const initial = resolveRoute();
   const [currentPage, setCurrentPage] = useState(initial.page);
   const [pageParams, setPageParams] = useState(initial.params);
@@ -110,6 +125,41 @@ export function AppContent() {
   const [chatModalOpen, setChatModalOpen] = useState(false);
   const [addProductModalOpen, setAddProductModalOpen] = useState(false);
   const [quickRentProduct, setQuickRentProduct] = useState(null);
+
+  // Aadhaar Prompt Modal State
+  const [aadhaarModalOpen, setAadhaarModalOpen] = useState(false);
+  const [aadhaarModalReason, setAadhaarModalReason] = useState("general");
+  const [pendingActionAfterAadhaar, setPendingActionAfterAadhaar] = useState(null);
+
+  const triggerAadhaarModal = (reason = "general", callback = null) => {
+    setAadhaarModalReason(reason);
+    setPendingActionAfterAadhaar(() => callback);
+    setAadhaarModalOpen(true);
+  };
+
+  const handleOpenAddProduct = () => {
+    if (!user) {
+      navigateTo("login");
+      return;
+    }
+    if (!user.is_aadhaar_verified) {
+      triggerAadhaarModal("list", () => navigateTo("list-item"));
+      return;
+    }
+    navigateTo("list-item");
+  };
+
+  const handleQuickRent = (prod) => {
+    if (!user) {
+      navigateTo("login");
+      return;
+    }
+    if (!user.is_aadhaar_verified) {
+      triggerAadhaarModal("buy", () => setQuickRentProduct(prod));
+      return;
+    }
+    setQuickRentProduct(prod);
+  };
 
   useEffect(() => {
     const handlePopState = (e) => {
@@ -137,6 +187,10 @@ export function AppContent() {
       page === "post-listing"
     ) {
       targetPage = "list-item";
+    } else if (page === "signin" || page === "auth") {
+      targetPage = "login";
+    } else if (page === "signup") {
+      targetPage = "register";
     } else if (
       page === "sharekart_p2p_chat_neighborhood_coordination" ||
       page === "chat-inbox"
@@ -152,8 +206,14 @@ export function AppContent() {
       targetPage = "aadhaar-ekyc";
     } else if (page === "mediation" || page === "arbitration") {
       targetPage = "disputes";
-    } else if (page === "trust-profile" || page === "seller-profile") {
+    } else if (page === "profile" || page === "my-profile") {
       targetPage = "profile";
+    } else if (
+      page === "trust-profile" ||
+      page === "seller-profile" ||
+      page === "public-profile"
+    ) {
+      targetPage = "trust-profile";
     } else if (page === "return-handover" || page === "return-check") {
       targetPage = "return-pass";
     } else if (
@@ -163,6 +223,38 @@ export function AppContent() {
     ) {
       targetPage = "dashboard";
       targetParams = { ...targetParams, tab: page };
+    }
+
+    // Intercept listing attempt if user is unverified
+    if (targetPage === "list-item") {
+      if (!user) {
+        targetPage = "login";
+      } else if (!user.is_aadhaar_verified) {
+        triggerAadhaarModal("list", () => {
+          setCurrentPage("list-item");
+          setPageParams(targetParams);
+          const p = "/list-item";
+          if (window.location.pathname !== p) window.history.pushState(targetParams, "", p);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+        return;
+      }
+    }
+
+    // Intercept checkout attempt if user is unverified
+    if (targetPage === "checkout") {
+      if (!user) {
+        targetPage = "login";
+      } else if (!user.is_aadhaar_verified) {
+        triggerAadhaarModal("buy", () => {
+          setCurrentPage("checkout");
+          setPageParams(targetParams);
+          const p = "/checkout";
+          if (window.location.pathname !== p) window.history.pushState(targetParams, "", p);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+        return;
+      }
     }
 
     setCurrentPage(targetPage);
@@ -181,10 +273,12 @@ export function AppContent() {
       <Navbar
         activePage={currentPage}
         onNavigate={navigateTo}
-        onOpenAuth={() => setAuthModalOpen(true)}
+        onOpenAuth={() => navigateTo("login")}
+        onOpenEditProfile={() => navigateTo("profile")}
         onOpenCart={() => setCartDrawerOpen(true)}
         onOpenChat={() => navigateTo("chat")}
-        onOpenAddProduct={() => navigateTo("list-item")}
+        onOpenAddProduct={handleOpenAddProduct}
+        onOpenAadhaarVerification={triggerAadhaarModal}
         onToast={showToast}
       />
 
@@ -193,8 +287,9 @@ export function AppContent() {
         {currentPage === "home" && (
           <HomePage
             onNavigate={navigateTo}
-            onOpenAddProduct={() => navigateTo("list-item")}
-            onQuickRent={(prod) => setQuickRentProduct(prod)}
+            onOpenAddProduct={handleOpenAddProduct}
+            onQuickRent={handleQuickRent}
+            onOpenAadhaarVerification={triggerAadhaarModal}
             onToast={showToast}
           />
         )}
@@ -203,6 +298,7 @@ export function AppContent() {
           <SearchPage
             initialFilters={pageParams}
             onNavigate={navigateTo}
+            onOpenAadhaarVerification={triggerAadhaarModal}
             onToast={showToast}
           />
         )}
@@ -212,6 +308,7 @@ export function AppContent() {
             productId={pageParams.id || 1}
             onNavigate={navigateTo}
             onOpenChat={() => navigateTo("chat")}
+            onOpenAadhaarVerification={triggerAadhaarModal}
             onToast={showToast}
           />
         )}
@@ -220,6 +317,7 @@ export function AppContent() {
           <CheckoutPage
             params={pageParams}
             onNavigate={navigateTo}
+            onOpenAadhaarVerification={triggerAadhaarModal}
             onToast={showToast}
           />
         )}
@@ -228,7 +326,8 @@ export function AppContent() {
           <DashboardPage
             params={pageParams}
             onNavigate={navigateTo}
-            onOpenAddProduct={() => navigateTo("list-item")}
+            onOpenAddProduct={handleOpenAddProduct}
+            onOpenAadhaarVerification={triggerAadhaarModal}
             onToast={showToast}
           />
         )}
@@ -237,7 +336,11 @@ export function AppContent() {
 
         {/* Phase 2 Pages */}
         {currentPage === "list-item" && (
-          <ListItemPage onNavigate={navigateTo} onToast={showToast} />
+          <ListItemPage
+            onNavigate={navigateTo}
+            onOpenAadhaarVerification={triggerAadhaarModal}
+            onToast={showToast}
+          />
         )}
 
         {currentPage === "chat" && (
@@ -262,6 +365,15 @@ export function AppContent() {
         )}
 
         {currentPage === "profile" && (
+          <ProfilePage
+            params={pageParams}
+            onNavigate={navigateTo}
+            onOpenAadhaarVerification={triggerAadhaarModal}
+            onToast={showToast}
+          />
+        )}
+
+        {currentPage === "trust-profile" && (
           <PublicTrustProfilePage onNavigate={navigateTo} onToast={showToast} />
         )}
 
@@ -272,12 +384,30 @@ export function AppContent() {
             onToast={showToast}
           />
         )}
+
+        {/* Dedicated Full-Page Login & Register */}
+        {currentPage === "login" && (
+          <AuthPage
+            initialMode="login"
+            onNavigate={navigateTo}
+            onToast={showToast}
+          />
+        )}
+
+        {currentPage === "register" && (
+          <AuthPage
+            initialMode="register"
+            onNavigate={navigateTo}
+            onToast={showToast}
+          />
+        )}
       </main>
 
       {/* Global Modals & Drawers */}
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
+        onOpenFullPage={(targetMode) => navigateTo(targetMode)}
         onToast={showToast}
       />
 
@@ -312,6 +442,25 @@ export function AppContent() {
         isOpen={!!quickRentProduct}
         product={quickRentProduct}
         onClose={() => setQuickRentProduct(null)}
+        onNavigate={navigateTo}
+        onToast={showToast}
+      />
+
+      {/* Aadhaar Prompt & eKYC Verification Modal */}
+      <AadhaarPromptModal
+        isOpen={aadhaarModalOpen}
+        onClose={() => {
+          setAadhaarModalOpen(false);
+          setPendingActionAfterAadhaar(null);
+        }}
+        reason={aadhaarModalReason}
+        onSuccess={() => {
+          if (typeof pendingActionAfterAadhaar === "function") {
+            const cb = pendingActionAfterAadhaar;
+            setPendingActionAfterAadhaar(null);
+            cb();
+          }
+        }}
         onNavigate={navigateTo}
         onToast={showToast}
       />

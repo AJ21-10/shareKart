@@ -9,21 +9,13 @@ export const AuthProvider = ({ children }) => {
   const [demoAccounts, setDemoAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Load demo accounts for easy testing
+  // Load demo accounts for 1-click testing
   useEffect(() => {
     const fetchDemoUsers = async () => {
       try {
         const data = await api.getDemoUsers();
         if (data.success) {
           setDemoAccounts(data.demoAccounts);
-          
-          // Default to first demo user (Aarav Patel) if no token is saved
-          if (!localStorage.getItem('sharekart_token') && data.demoAccounts.length > 0) {
-            const defaultUser = data.demoAccounts[0];
-            localStorage.setItem('sharekart_token', defaultUser.token);
-            setToken(defaultUser.token);
-            setUser(defaultUser);
-          }
         }
       } catch (err) {
         console.error('Failed to load demo accounts', err);
@@ -102,8 +94,8 @@ export const AuthProvider = ({ children }) => {
     setUser(demoUser);
   };
 
-  const otpLogin = async (phone, channel = 'sms') => {
-    const data = await api.otpLogin(phone, channel);
+  const otpLogin = async (phone) => {
+    const data = await api.otpLogin(phone);
     if (data.success) {
       localStorage.setItem('sharekart_token', data.token);
       setToken(data.token);
@@ -114,6 +106,22 @@ export const AuthProvider = ({ children }) => {
 
   const updateUser = (updatedFields) => {
     setUser(prev => ({ ...prev, ...updatedFields }));
+  };
+
+  const updateProfile = async (profileData) => {
+    const data = await api.updateProfile(profileData);
+    if (data.success && data.user) {
+      setUser(data.user);
+      if (data.user.location) {
+        setCurrentLocation(data.user.location);
+        localStorage.setItem('sharekart_current_location', data.user.location);
+      }
+    }
+    return data;
+  };
+
+  const changePassword = async (currentPassword, newPassword) => {
+    return await api.changePassword(currentPassword, newPassword);
   };
 
   return (
@@ -129,6 +137,8 @@ export const AuthProvider = ({ children }) => {
       register,
       otpLogin,
       updateUser,
+      updateProfile,
+      changePassword,
       logout,
       switchDemoUser
     }}>

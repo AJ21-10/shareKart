@@ -25,6 +25,14 @@ export const AddProductModal = ({ isOpen, onClose, onProductCreated, onToast }) 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!user) {
+      alert('Please log in to list a product');
+      return;
+    }
+    if (!user.is_aadhaar_verified) {
+      alert('Aadhaar verification is required to list products. Please verify your Aadhaar to continue.');
+      return;
+    }
     setLoading(true);
 
     try {
@@ -40,7 +48,7 @@ export const AddProductModal = ({ isOpen, onClose, onProductCreated, onToast }) 
         images: [defaultImg],
         specs: {
           'Condition': formData.condition_tag,
-          'Owner Verified': 'Aadhaar eKYC Verified'
+          'Owner Verified': user?.is_aadhaar_verified ? 'Aadhaar eKYC Verified' : 'Community Host'
         },
         kit_items: [formData.title, 'Protective Padded Bag', 'Power Adapter & Cable'],
         pickup_locations: [formData.location_name]

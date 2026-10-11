@@ -45,7 +45,7 @@ export const PublicTrustProfilePage = ({ userId, onNavigate, onToast }) => {
 
   const p = profile || {
     name: currentUser?.name || 'Aarav Patel',
-    avatar_url: currentUser?.avatar_url || 'https://lh3.googleusercontent.com/aida-public/AB6AXuB545f6ceGmox7wT32Fww8WeepCos-Gc28aQMjSouhaEb6Ww_eJ3i1rjONcK0h9q-ZuPcSGTO4lnll9Ty3EbYhBUn8TjVVJ2U9dLolJIrafUZySH4QPEuh7vqZRVc-Fdfv6TEH45cHms9CiVRYXZVzfQlO0NQJ0WMJZcUMHxsW39Yho2r4T_wh2WGmHew8paWqYAXiHti3Nukk9p66xn7eOVR-1K76oPa-86XoDwC_xOa28FqIuPdS8og',
+    avatar_url: currentUser?.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=Aarav&backgroundColor=b6e3f4',
     aadhaar_hash: currentUser?.aadhaar_hash || '#OK-82914',
     rating: 4.9,
     reviews_count: 84,
@@ -88,10 +88,17 @@ export const PublicTrustProfilePage = ({ userId, onNavigate, onToast }) => {
                     <h1 className="font-headline-lg text-xl sm:text-headline-lg text-on-surface font-bold truncate">
                       {p.name}
                     </h1>
-                    <span className="inline-flex items-center gap-1 bg-secondary-container text-on-secondary-container px-space-8 py-1 rounded-lg font-label-bold text-xs sm:text-label-bold">
-                      <span className="material-symbols-outlined text-[15px]">shield</span>
-                      Aadhaar Verified
-                    </span>
+                    {currentUser?.is_aadhaar_verified ? (
+                      <span className="inline-flex items-center gap-1 bg-secondary-container text-on-secondary-container px-space-8 py-1 rounded-lg font-label-bold text-xs sm:text-label-bold">
+                        <span className="material-symbols-outlined text-[15px]">shield</span>
+                        Aadhaar Verified
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 bg-amber-500/15 text-amber-700 border border-amber-500/30 px-space-8 py-1 rounded-lg font-label-bold text-xs sm:text-label-bold">
+                        <span className="material-symbols-outlined text-[15px] text-amber-600">warning</span>
+                        Aadhaar Unverified
+                      </span>
+                    )}
                     <span className="bg-surface-container-high text-on-surface-variant font-label-bold text-xs sm:text-label-bold px-space-8 py-1 rounded-lg">
                       {p.trustStats?.tierLevel || 'Level 3 Super Lender'}
                     </span>

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
-export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onToast }) => {
+export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onOpenAadhaarVerification, onToast }) => {
+  const { user } = useAuth();
   const { addToCart } = useCart();
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -60,6 +62,26 @@ export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onTo
   };
 
   const handleProceedRent = () => {
+    if (!user) {
+      onNavigate('login');
+      return;
+    }
+    if (!user.is_aadhaar_verified) {
+      if (onOpenAadhaarVerification) {
+        onOpenAadhaarVerification('buy', () => {
+          onNavigate('checkout', {
+            productId: product.id,
+            orderType: 'rent',
+            startDate,
+            endDate,
+            totalDays: calculatedCost?.totalDays || 3
+          });
+        });
+      } else {
+        onNavigate('aadhaar-ekyc');
+      }
+      return;
+    }
     onNavigate('checkout', {
       productId: product.id,
       orderType: 'rent',
@@ -70,6 +92,23 @@ export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onTo
   };
 
   const handleBuyNow = () => {
+    if (!user) {
+      onNavigate('login');
+      return;
+    }
+    if (!user.is_aadhaar_verified) {
+      if (onOpenAadhaarVerification) {
+        onOpenAadhaarVerification('buy', () => {
+          onNavigate('checkout', {
+            productId: product.id,
+            orderType: 'buy'
+          });
+        });
+      } else {
+        onNavigate('aadhaar-ekyc');
+      }
+      return;
+    }
     onNavigate('checkout', {
       productId: product.id,
       orderType: 'buy'
@@ -591,20 +630,33 @@ export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onTo
               <div className="flex items-center gap-2.5 sm:gap-space-12">
                 <div className="relative">
                   <img
-                    src={product.seller_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                    src={product.seller_avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=Lender&backgroundColor=c0aede'}
                     alt={product.seller_name}
                     className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-secondary-fixed"
                   />
-                  <span className="material-symbols-outlined absolute -bottom-1 -right-1 text-[13px] sm:text-[16px] bg-secondary text-on-secondary rounded-full p-0.5">
-                    verified
-                  </span>
+                  {product.seller_is_verified ? (
+                    <span className="material-symbols-outlined absolute -bottom-1 -right-1 text-[13px] sm:text-[16px] bg-secondary text-on-secondary rounded-full p-0.5">
+                      verified
+                    </span>
+                  ) : (
+                    <span className="material-symbols-outlined absolute -bottom-1 -right-1 text-[13px] sm:text-[16px] bg-amber-500 text-slate-950 font-bold rounded-full p-0.5" title="Community Host">
+                      person
+                    </span>
+                  )}
                 </div>
                 <div>
                   <p className="font-headline-sm text-xs sm:text-headline-sm text-on-surface font-bold">{product.seller_name}</p>
-                  <p className="text-[10px] sm:text-badge font-badge text-secondary flex items-center gap-0.5">
-                    <span className="material-symbols-outlined text-[12px]">id_card</span>
-                    Aadhaar Verified Citizen
-                  </p>
+                  {product.seller_is_verified ? (
+                    <p className="text-[10px] sm:text-badge font-badge text-secondary flex items-center gap-0.5">
+                      <span className="material-symbols-outlined text-[12px]">id_card</span>
+                      Aadhaar Verified Citizen
+                    </p>
+                  ) : (
+                    <p className="text-[10px] sm:text-badge font-badge text-on-surface-variant flex items-center gap-0.5">
+                      <span className="material-symbols-outlined text-[12px]">shield</span>
+                      Community Host
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex flex-col items-end text-[10px] sm:text-badge">

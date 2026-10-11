@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-export const ListItemPage = ({ onNavigate, onToast }) => {
+export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast }) => {
   const { user, currentLocation } = useAuth();
 
   // Form State
@@ -89,6 +89,19 @@ export const ListItemPage = ({ onNavigate, onToast }) => {
 
   const handlePublish = async (e) => {
     e?.preventDefault();
+    if (!user) {
+      onNavigate('login');
+      return;
+    }
+    if (!user.is_aadhaar_verified) {
+      if (onOpenAadhaarVerification) {
+        onOpenAadhaarVerification('list', () => handlePublish());
+      } else {
+        onNavigate('aadhaar-ekyc');
+      }
+      return;
+    }
+
     if (!title.trim()) {
       alert('Please provide an item title');
       return;
@@ -131,9 +144,16 @@ export const ListItemPage = ({ onNavigate, onToast }) => {
         throw new Error(res.message || 'Failed to publish');
       }
     } catch (err) {
-      console.warn('Backend create product fallback notice:', err);
-      onToast && onToast('Listing published to Gandhinagar feed!');
-      onNavigate('search');
+      console.warn('Backend create product error notice:', err);
+      if (err.message && err.message.toLowerCase().includes('aadhaar')) {
+        if (onOpenAadhaarVerification) {
+          onOpenAadhaarVerification('list');
+        } else {
+          alert(err.message);
+        }
+        return;
+      }
+      onToast && onToast(err.message || 'Failed to publish listing');
     } finally {
       setIsSubmitting(false);
     }
@@ -181,12 +201,61 @@ export const ListItemPage = ({ onNavigate, onToast }) => {
               Earn up to ₹15,000/month from idle gadgets, electronics, and tools. All transactions protected by RBI-compliant security escrow.
             </p>
           </div>
-          <div className="flex items-center gap-space-8 self-start md:self-auto bg-surface-container-low px-space-12 py-space-6 rounded-lg border border-outline-variant/50">
-            <span className="material-symbols-outlined text-[20px] text-secondary">verified_user</span>
-            <span className="text-body-sm font-label-bold text-on-surface">UIDAI eKYC Verified Host</span>
-          </div>
+          {user?.is_aadhaar_verified ? (
+            <div className="flex items-center gap-space-8 self-start md:self-auto bg-surface-container-low px-space-12 py-space-6 rounded-lg border border-outline-variant/50">
+              <span className="material-symbols-outlined text-[20px] text-secondary">verified_user</span>
+              <span className="text-body-sm font-label-bold text-on-surface">UIDAI eKYC Verified Host</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (onOpenAadhaarVerification) {
+                  onOpenAadhaarVerification('list');
+                } else {
+                  onNavigate('aadhaar-ekyc');
+                }
+              }}
+              className="flex items-center gap-space-8 self-start md:self-auto bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-space-12 py-space-6 rounded-lg cursor-pointer transition text-amber-700 shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[20px] text-amber-600">warning</span>
+              <span className="text-body-sm font-label-bold">Aadhaar Unverified · Click to Verify</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {!user?.is_aadhaar_verified && (
+        <div className="w-full mb-space-16 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-start gap-2.5">
+            <span className="material-symbols-outlined text-[22px] text-amber-600 shrink-0 mt-0.5">
+              shield_person
+            </span>
+            <div>
+              <p className="font-bold text-slate-900 text-sm">
+                Aadhaar Verification Required to Publish Listings
+              </p>
+              <p className="text-on-surface-variant mt-0.5">
+                ShareKart requires 100% Aadhaar-verified hosts to prevent fraud and protect peer equipment. Please complete quick UIDAI verification before publishing.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenAadhaarVerification) {
+                onOpenAadhaarVerification('list');
+              } else {
+                onNavigate('aadhaar-ekyc');
+              }
+            }}
+            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 rounded-lg shrink-0 flex items-center justify-center gap-1.5 transition cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">verified</span>
+            <span>Verify Aadhaar Now</span>
+          </button>
+        </div>
+      )}
 
       {/* Main Grid: Guided Form & Live Calculator Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-24 items-start">

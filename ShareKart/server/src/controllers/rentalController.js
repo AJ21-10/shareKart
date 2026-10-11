@@ -69,6 +69,12 @@ export const calculateCost = async (req, res, next) => {
 export const checkout = async (req, res, next) => {
   try {
     const userId = req.user.id;
+    if (!req.user.is_aadhaar_verified) {
+      return res.status(403).json({
+        success: false,
+        message: 'Aadhaar verification is required to rent or buy items. Please verify your Aadhaar to continue.'
+      });
+    }
     const {
       productId,
       orderType = 'rent',
