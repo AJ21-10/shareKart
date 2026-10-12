@@ -10,6 +10,8 @@
     background-color: #f8f9ff;
     color: #0b1c30;
     font-family: "Inter", sans-serif;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* Strict currency rupee styling with tabular numbers */
