@@ -59,23 +59,25 @@ export const ProfilePage = ({
   ];
 
   useEffect(() => {
-    if (user) {
-      setName(user.name || "");
-      setPhone(user.phone || "");
-      setLocation(user.location || "");
-      setCity(user.city || "Gandhinagar");
-      setPincode(user.pincode || "382010");
-      // Default to cartoon vector if user has no avatar or an old unsplash / google person photo
-      const currentAvatar = user.avatar_url;
-      if (
-        !currentAvatar ||
-        currentAvatar.includes("unsplash.com") ||
-        currentAvatar.includes("googleusercontent.com")
-      ) {
-        setAvatarUrl(avatarPresets[0]);
-      } else {
-        setAvatarUrl(currentAvatar);
-      }
+    if (!user) {
+      onNavigate && onNavigate("home");
+      return;
+    }
+    setName(user.name || "");
+    setPhone(user.phone || "");
+    setLocation(user.location || "");
+    setCity(user.city || "Gandhinagar");
+    setPincode(user.pincode || "382010");
+    // Default to cartoon vector if user has no avatar or an old unsplash / google person photo
+    const currentAvatar = user.avatar_url;
+    if (
+      !currentAvatar ||
+      currentAvatar.includes("unsplash.com") ||
+      currentAvatar.includes("googleusercontent.com")
+    ) {
+      setAvatarUrl(avatarPresets[0]);
+    } else {
+      setAvatarUrl(currentAvatar);
     }
   }, [user]);
 

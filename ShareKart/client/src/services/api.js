@@ -45,11 +45,20 @@ export const api = {
     return handleResponse(res);
   },
 
-  async verifyRegistrationOtp(phone, otp) {
+  async verifyRegistrationOtp(phone, otp, name = '') {
     const res = await fetch(`${API_BASE}/auth/verify-registration-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, otp })
+      body: JSON.stringify({ phone, otp, name })
+    });
+    return handleResponse(res);
+  },
+
+  async verifyPhoneEmail(userjson_url, phoneFallback = null) {
+    const res = await fetch(`${API_BASE}/auth/phone-email-verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userjson_url, phone: phoneFallback })
     });
     return handleResponse(res);
   },

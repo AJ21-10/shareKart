@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { Navbar } from "./components/Navbar";
@@ -113,11 +113,12 @@ const resolveRoute = () => {
 };
 
 export function AppContent() {
-  const { user } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const initial = resolveRoute();
   const [currentPage, setCurrentPage] = useState(initial.page);
   const [pageParams, setPageParams] = useState(initial.params);
   const [toastMessage, setToastMessage] = useState("");
+  const prevAuthRef = useRef(isAuthenticated);
 
   // Modals
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -267,6 +268,32 @@ export function AppContent() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Auto-redirect to home page when logout occurs from any endpoint
+  useEffect(() => {
+    if (prevAuthRef.current && !isAuthenticated) {
+      navigateTo("home");
+    }
+    prevAuthRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
+  // Protected pages auto-redirection to home if user is not authenticated
+  useEffect(() => {
+    const protectedPages = [
+      "profile",
+      "dashboard",
+      "orders",
+      "list-item",
+      "chat",
+      "disputes",
+      "handover-pass",
+      "return-pass",
+      "aadhaar-ekyc",
+    ];
+    if (!loading && !isAuthenticated && protectedPages.includes(currentPage)) {
+      navigateTo("home");
+    }
+  }, [isAuthenticated, loading, currentPage]);
+
   return (
     <div className="min-h-screen bg-surface flex flex-col justify-between">
       {/* Top Fixed Navbar */}
@@ -283,7 +310,7 @@ export function AppContent() {
       />
 
       {/* Main Routed Page Container */}
-      <main className="w-full pt-24 sm:pt-28 md:pt-32 max-w-[1280px] mx-auto px-3 sm:px-4 md:px-gutter-desktop pb-20 md:pb-8 flex-1">
+      <main className="w-full pt-24 sm:pt-28 md:pt-32 max-w-[1280px] mx-auto px-3 sm:px-4 md:px-gutter-desktop pb-24 md:pb-8 flex-1">
         {currentPage === "home" && (
           <HomePage
             onNavigate={navigateTo}

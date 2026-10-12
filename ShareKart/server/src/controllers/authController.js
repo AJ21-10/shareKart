@@ -340,8 +340,38 @@ export const changePassword = async (req, res, next) => {
   }
 };
 
-// In-memory registration OTP store
-const registrationOtps = new Map();
+// Phone.Email session store with lightweight persistence so server reloads do not drop session
+import fs from 'fs';
+import path from 'path';
+
+const PE_SESSION_FILE = path.resolve('./.phone_email_sessions.json');
+const getPeSessions = () => {
+  try {
+    if (fs.existsSync(PE_SESSION_FILE)) {
+      const data = JSON.parse(fs.readFileSync(PE_SESSION_FILE, 'utf8'));
+      return new Map(Object.entries(data));
+    }
+  } catch (err) {}
+  return new Map();
+};
+const savePeSession = (phone, sessionData) => {
+  try {
+    const map = getPeSessions();
+    map.set(phone, sessionData);
+    fs.writeFileSync(PE_SESSION_FILE, JSON.stringify(Object.fromEntries(map)));
+  } catch (err) {}
+};
+const deletePeSession = (phone) => {
+  try {
+    const map = getPeSessions();
+    map.delete(phone);
+    fs.writeFileSync(PE_SESSION_FILE, JSON.stringify(Object.fromEntries(map)));
+  } catch (err) {}
+};
+
+// [COMMENTED OUT] Backup / Fallback OTP variables as requested
+// const HARDCODED_OTP = '123456';
+// const registrationOtps = new Map();
 
 export const sendRegistrationOtp = async (req, res, next) => {
   try {
@@ -360,15 +390,66 @@ export const sendRegistrationOtp = async (req, res, next) => {
       return res.sendError(409, 'An account with this phone number already exists. Please log in instead.', null, 'PHONE_EXISTS');
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 10 * 60 * 1000;
-    registrationOtps.set(cleanPhone, { otp, expiresAt });
+    // 1. Dispatch REAL SMS via Phone.Email network
+    const clientId = process.env.CLIENT_ID || process.env.PHONE_EMAIL_CLIENT_ID || '11753610740663059476';
+    let peSuccess = false;
+    let peStatusMessage = '';
+
+    try {
+      const peBody = new URLSearchParams({
+        phone_country: '+91',
+        phone_no: cleanPhone,
+        client_id: clientId,
+        redirect_url: ''
+      });
+
+      const peRes = await fetch('https://auth.phone.email/submit-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: peBody.toString()
+      });
+
+      const rawCookie = peRes.headers.get('set-cookie') || '';
+      const peData = await peRes.json().catch(() => ({}));
+
+      if (peData.flag === 1 || peData.flag === 2 || peData.flag === 6) {
+        peSuccess = true;
+        const cleanCookie = rawCookie.split(';')[0].trim();
+        savePeSession(cleanPhone, {
+          cookie: cleanCookie,
+          timestamp: Date.now()
+        });
+        console.log(`\n========================================`);
+        console.log(`[Phone.Email SMS SENT] 📲 Real SMS dispatched to: +91 ${cleanPhone}`);
+        console.log(`[Phone.Email SMS SENT] ⏱️ Check your mobile handset inbox!`);
+        console.log(`========================================\n`);
+      } else if (peData.flag === 7) {
+        peStatusMessage = 'OTP was recently sent to your phone. Valid for 3 mins.';
+        console.log(`[Phone.Email] Rate-limit cooldown (3 mins) for: +91 ${cleanPhone}`);
+      } else {
+        console.log(`[Phone.Email] Gateway status: ${JSON.stringify(peData)}`);
+      }
+    } catch (peErr) {
+      console.warn(`[Phone.Email] Gateway connection note: ${peErr.message}`);
+    }
+
+    /*
+    // [COMMENTED OUT] Backup / Fallback dynamic code generation as requested
+    const dynamicOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresInSeconds = 300;
+    const expiresAt = Date.now() + expiresInSeconds * 1000;
+    registrationOtps.set(cleanPhone, { otp: dynamicOtp, expiresAt });
+    */
 
     res.json({
       success: true,
-      message: `OTP sent to +91 ${cleanPhone}`,
+      message: peSuccess
+        ? `Real SMS OTP sent to +91 ${cleanPhone} via Phone.Email!`
+        : (peStatusMessage || `OTP sent to +91 ${cleanPhone}`),
       phone: `+91 ${cleanPhone}`,
-      expiresInSeconds: 600
+      // otp: dynamicOtp, // [COMMENTED OUT]
+      realSmsSent: peSuccess,
+      expiresInSeconds: 300
     });
   } catch (error) {
     next(error);
@@ -377,25 +458,197 @@ export const sendRegistrationOtp = async (req, res, next) => {
 
 export const verifyRegistrationOtp = async (req, res, next) => {
   try {
-    const { phone, otp } = req.body;
+    const { phone, otp, name } = req.body;
     if (!phone || !otp) {
       return res.sendError(400, 'Mobile phone and OTP are required.', null, 'BAD_REQUEST');
     }
     const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-    const stored = registrationOtps.get(cleanPhone);
-
     const inputOtp = otp.toString().trim();
-    const validCodes = ['481902', '123456', '000000', '111111', '654321'];
-    if ((stored && stored.otp === inputOtp && Date.now() <= stored.expiresAt) || validCodes.includes(inputOtp)) {
-      if (stored) registrationOtps.delete(cleanPhone);
+    const clientId = process.env.CLIENT_ID || process.env.PHONE_EMAIL_CLIENT_ID || '11753610740663059476';
+
+    // 1. Verify against Phone.Email network session
+    const peSessions = getPeSessions();
+    const peSession = peSessions.get(cleanPhone);
+    if (!peSession || !peSession.cookie) {
+      console.warn(`[Phone.Email] No active session found for +91 ${cleanPhone}`);
+      return res.status(400).json({
+        success: false,
+        message: 'No active OTP session found. Please click Get OTP to receive a fresh SMS.'
+      });
+    }
+
+    try {
+      const firstName = (name && name.trim().split(' ')[0]) || 'User';
+      const lastName = (name && name.trim().split(' ').slice(1).join(' ')) || 'Customer';
+
+      const peVerifyBody = new URLSearchParams({
+        otp: inputOtp,
+        client_id: clientId,
+        device: '',
+        business_name: '',
+        redirect_url: '',
+        fname: firstName,
+        lname: lastName,
+        ue: '',
+        flag_allow_auth_name: '0'
+      });
+
+      console.log(`[Phone.Email Verify Request] Phone: +91 ${cleanPhone}, OTP: ${inputOtp}`);
+
+      const peVerifyRes = await fetch('https://auth.phone.email/verify-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Cookie': peSession.cookie
+        },
+        body: peVerifyBody.toString()
+      });
+
+      const peVerifyData = await peVerifyRes.json().catch(() => ({}));
+      console.log(`[Phone.Email Verify Response] Status: ${peVerifyRes.status}, Body:`, peVerifyData);
+
+      if (peVerifyData.flag === 1) {
+        deletePeSession(cleanPhone);
+        console.log(`[Phone.Email] ✅ Real SMS OTP verified successfully via Phone.Email for +91 ${cleanPhone}`);
+        return res.json({
+          success: true,
+          message: 'Mobile number verified successfully via Phone.Email!'
+        });
+      } else {
+        console.log(`[Phone.Email] ❌ Verification failed with flag ${peVerifyData.flag}`);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid OTP code. Please enter the exact 6-digit code received on your mobile SMS.'
+        });
+      }
+    } catch (peVerifyErr) {
+      console.error(`[Phone.Email Verify Error] ${peVerifyErr.message}`);
+      return res.status(500).json({
+        success: false,
+        message: 'Network error communicating with Phone.Email. Please try again.'
+      });
+    }
+
+    /*
+    // [COMMENTED OUT] Fallback in-memory verification as requested
+    const stored = registrationOtps.get(cleanPhone);
+    const isDynamicMatch = stored && stored.otp === inputOtp && Date.now() <= stored.expiresAt;
+    const isFallbackMatch = inputOtp === HARDCODED_OTP || inputOtp === '481902';
+
+    if (isDynamicMatch || isFallbackMatch) {
+      registrationOtps.delete(cleanPhone);
+      deletePeSession(cleanPhone);
+      console.log(`[OTP SERVICE] ✅ Verified successfully for +91 ${cleanPhone}`);
       return res.json({
         success: true,
         message: 'Mobile number verified successfully!'
       });
-    }
-
-    return res.sendError(400, 'Invalid or expired OTP. Please enter the correct 6-digit code.', null, 'INVALID_OTP');
+    */
   } catch (error) {
     next(error);
   }
 };
+
+/**
+ * Phone.Email ("Sign in with Phone") Authentication Controller
+ * Reads user data from userjson_url, authenticates or creates the user,
+ * and returns the JWT access token and user profile.
+ */
+export const verifyPhoneEmail = async (req, res, next) => {
+  try {
+    const { userjson_url, user_json_url, phone: bodyPhone } = req.body;
+    const jsonUrl = userjson_url || user_json_url;
+
+    let countryCode = '+91';
+    let phoneNumber = bodyPhone || '';
+    let firstName = '';
+    let lastName = '';
+
+    if (jsonUrl) {
+      try {
+        console.log(`[Phone.Email] Fetching authenticated user details from: ${jsonUrl}`);
+        const response = await fetch(jsonUrl, { signal: AbortSignal.timeout(8000) });
+        if (response.ok) {
+          const data = await response.json();
+          countryCode = data.user_country_code || data.country_code || '+91';
+          phoneNumber = data.user_phone_number || data.phone_no || phoneNumber;
+          firstName = data.user_first_name || '';
+          lastName = data.user_last_name || '';
+        } else {
+          console.warn(`[Phone.Email] Warning: Failed to fetch JSON URL (${response.status})`);
+        }
+      } catch (fetchErr) {
+        console.warn(`[Phone.Email] Direct fetch error: ${fetchErr.message}`);
+      }
+    }
+
+    if (!phoneNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to retrieve verified phone number from Phone.Email.'
+      });
+    }
+
+    const cleanDigits = phoneNumber.replace(/\D/g, '').slice(-10);
+    if (cleanDigits.length !== 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number format received.'
+      });
+    }
+
+    // 1. Look up existing user
+    let user = await db.get(
+      `SELECT * FROM users 
+       WHERE REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+91', '') LIKE ?`,
+      [`%${cleanDigits}%`]
+    );
+
+    // 2. If user doesn't exist, create an account
+    if (!user) {
+      const defaultAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanDigits}&backgroundColor=b6e3f4,c0aede,d1d4f9`;
+      const fullName = (firstName || lastName)
+        ? `${firstName} ${lastName}`.trim()
+        : `User ${cleanDigits.slice(-4)}`;
+      const dummyPasswordHash = bcrypt.hashSync(Math.random().toString(36) + 'SharekartAuth2026', 10);
+      const formattedPhone = `${countryCode.startsWith('+') ? countryCode : '+' + countryCode} ${cleanDigits}`;
+
+      const insertSql = `
+        INSERT INTO users (name, email, password_hash, phone, location, avatar_url, is_aadhaar_verified, member_since)
+        VALUES (?, ?, ?, ?, ?, ?, false, ?)
+        RETURNING id
+      `;
+
+      const result = await db.run(insertSql, [
+        fullName,
+        `${cleanDigits}@phone.email`,
+        dummyPasswordHash,
+        formattedPhone,
+        'Gandhinagar, 382010',
+        defaultAvatar,
+        'Oct 2026'
+      ]);
+
+      const newUserId = result.lastInsertRowid || result.rows?.[0]?.id;
+      user = await db.get(
+        'SELECT id, name, email, phone, location, city, pincode, avatar_url, is_aadhaar_verified, aadhaar_hash, aadhaar_number, member_since, rating, reviews_count FROM users WHERE id = ?',
+        [newUserId]
+      );
+    }
+
+    const token = generateToken(user.id);
+    const { password_hash, ...safeUser } = user;
+
+    console.log(`[Phone.Email] ✅ Successfully authenticated user #${user.id} (${user.phone})`);
+
+    res.json({
+      success: true,
+      message: 'Signed in securely with Phone.Email.',
+      token,
+      user: safeUser
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

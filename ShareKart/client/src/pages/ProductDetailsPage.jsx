@@ -697,7 +697,7 @@ export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onOp
       </div>
 
       {/* MOBILE STICKY ACTION BAR (Visible on Mobile/Tablet only) */}
-      <div className="lg:hidden fixed bottom-14 left-0 right-0 z-30 bg-surface-container-lowest/95 backdrop-blur-md border-t border-outline-variant/60 px-3 py-2 shadow-lg flex items-center justify-between gap-3">
+      <div className="lg:hidden fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-40 bg-surface-container-lowest/95 backdrop-blur-md border-t border-outline-variant/60 px-3 py-2 shadow-lg flex items-center justify-between gap-3">
         <div className="flex flex-col">
           <div className="flex items-baseline gap-1">
             <span className="font-price-md text-base font-bold text-on-surface">

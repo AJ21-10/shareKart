@@ -41,18 +41,18 @@ export const Navbar = ({
   return (
     <>
       <header className="fixed top-0 w-full z-40 bg-primary-container shadow-[0_1px_8px_rgba(0,0,0,0.12)]">
-        <div className="max-w-[1280px] mx-auto px-3 sm:px-4 md:px-gutter-desktop flex flex-col justify-between py-2 sm:py-space-6 gap-2">
+        <div className="max-w-[1280px] mx-auto px-2.5 sm:px-4 md:px-gutter-desktop flex flex-col justify-between py-1.5 sm:py-space-6 gap-1.5 sm:gap-2">
           {/* Top Header Bar */}
-          <div className="flex items-center justify-between gap-2 sm:gap-space-12">
+          <div className="flex items-center justify-between gap-1 sm:gap-space-12">
             {/* Logo & City Selector */}
-            <div className="flex items-center gap-2 sm:gap-space-12 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-space-12 shrink-0 min-w-0">
               <button
                 onClick={() => onNavigate("home")}
-                className="flex items-center gap-1.5 sm:gap-space-8 text-left cursor-pointer focus:outline-none"
+                className="flex items-center gap-1 sm:gap-space-8 text-left cursor-pointer focus:outline-none shrink-0"
               >
                 <img
                   alt="Sharekart Logo"
-                  className="h-8 sm:h-9 w-auto object-contain"
+                  className="h-7 sm:h-9 w-auto max-w-[95px] sm:max-w-none object-contain"
                   src="/sharekart-logo.png"
                   onError={(e) => {
                     e.target.src =
@@ -64,19 +64,19 @@ export const Navbar = ({
               {/* Location Selector Button with Real-Time Indicator - Visible on all devices */}
               <button
                 onClick={() => setLocationModalOpen(true)}
-                className="flex items-center gap-1 sm:gap-space-6 bg-primary/40 hover:bg-primary/70 text-on-primary px-2 sm:px-space-10 py-1 sm:py-space-6 rounded-lg border border-outline/30 hover:border-secondary-fixed text-xs sm:text-body-sm font-body-sm transition-all group shadow-xs cursor-pointer"
+                className="flex items-center gap-1 sm:gap-space-6 bg-primary/40 hover:bg-primary/70 text-on-primary px-1.5 sm:px-space-10 py-0.5 sm:py-space-6 rounded-lg border border-outline/30 hover:border-secondary-fixed text-[11px] sm:text-body-sm transition-all group shadow-xs cursor-pointer shrink-0"
                 title="Change location & discover nearby hubs in real time"
               >
-                <div className="relative flex items-center">
-                  <span className="material-symbols-outlined text-[15px] sm:text-[17px] text-secondary-fixed group-hover:scale-110 transition-transform">
+                <div className="relative flex items-center shrink-0">
+                  <span className="material-symbols-outlined text-[14px] sm:text-[17px] text-secondary-fixed group-hover:scale-110 transition-transform">
                     location_on
                   </span>
                   <span className="w-1.5 h-1.5 rounded-full bg-secondary-fixed absolute -top-0.5 -right-0.5 animate-pulse"></span>
                 </div>
-                <span className="font-label-bold text-[11px] sm:text-label-bold text-on-primary max-w-[90px] xs:max-w-[120px] sm:max-w-[140px] truncate">
+                <span className="font-label-bold text-[11px] sm:text-label-bold text-on-primary max-w-[65px] xs:max-w-[100px] sm:max-w-[140px] truncate">
                   {currentLocation || user?.location || "Gandhinagar"}
                 </span>
-                <span className="material-symbols-outlined text-[14px] sm:text-[16px] text-on-surface-variant group-hover:text-on-primary transition-colors">
+                <span className="material-symbols-outlined text-[12px] sm:text-[16px] text-on-surface-variant group-hover:text-on-primary transition-colors shrink-0">
                   keyboard_arrow_down
                 </span>
               </button>
@@ -119,15 +119,15 @@ export const Navbar = ({
             </form>
 
             {/* Action CTAs */}
-            <div className="flex items-center gap-1.5 sm:gap-space-12 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-space-12 shrink-0">
               {/* Mobile Search Toggle Button */}
               <button
                 onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-                className="md:hidden p-1.5 text-on-primary hover:text-secondary-fixed transition-colors"
+                className="md:hidden p-1 text-on-primary hover:text-secondary-fixed transition-colors"
                 title="Search items"
                 aria-label="Toggle Search"
               >
-                <span className="material-symbols-outlined text-[22px]">
+                <span className="material-symbols-outlined text-[20px]">
                   {mobileSearchOpen ? "close" : "search"}
                 </span>
               </button>
@@ -149,10 +149,10 @@ export const Navbar = ({
               </button>
 
               {/* Utility Icons */}
-              <div className="flex items-center gap-1 sm:gap-space-8 text-on-primary">
+              <div className="flex items-center gap-0.5 sm:gap-space-8 text-on-primary">
                 <button
                   onClick={onOpenChat}
-                  className={`relative p-1.5 sm:p-space-6 hover:text-secondary-fixed transition-colors cursor-pointer ${
+                  className={`relative p-1 sm:p-space-6 hover:text-secondary-fixed transition-colors cursor-pointer ${
                     activePage === "chat" ||
                     activePage ===
                       "sharekart_p2p_chat_neighborhood_coordination"
@@ -162,10 +162,10 @@ export const Navbar = ({
                   title="Messages"
                   aria-label="Messages"
                 >
-                  <span className="material-symbols-outlined text-[20px] sm:text-[22px]">
+                  <span className="material-symbols-outlined text-[19px] sm:text-[22px]">
                     forum
                   </span>
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
+                  <span className="absolute top-0.5 right-0.5 w-1.5 sm:w-2 h-1.5 sm:h-2 bg-error rounded-full"></span>
                 </button>
 
                 <button
@@ -181,15 +181,15 @@ export const Navbar = ({
 
                 <button
                   onClick={onOpenCart}
-                  className="relative p-1.5 sm:p-space-6 hover:text-secondary-fixed transition-colors"
+                  className="relative p-1 sm:p-space-6 hover:text-secondary-fixed transition-colors"
                   title="Cart"
                   aria-label="Cart"
                 >
-                  <span className="material-symbols-outlined text-[20px] sm:text-[22px]">
+                  <span className="material-symbols-outlined text-[19px] sm:text-[22px]">
                     shopping_bag
                   </span>
                   {cartCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-secondary text-on-secondary text-[10px] sm:text-badge font-badge rounded-full px-1.5 py-0.5 leading-none">
+                    <span className="absolute -top-0.5 -right-0.5 bg-secondary text-on-secondary text-[9px] sm:text-badge font-badge rounded-full px-1 sm:px-1.5 py-0 sm:py-0.5 leading-none">
                       {cartCount}
                     </span>
                   )}
@@ -197,7 +197,7 @@ export const Navbar = ({
               </div>
 
               {/* User Profile & Demo Persona Switcher */}
-              <div className="relative pl-1 sm:pl-space-4 border-l border-outline/30">
+              <div className="relative pl-1 sm:pl-space-4 border-l border-outline/30 shrink-0">
                 {isAuthenticated ? (
                   <div>
                     <button
@@ -469,6 +469,8 @@ export const Navbar = ({
                             onClick={() => {
                               logout();
                               setProfileDropdownOpen(false);
+                              onNavigate("home");
+                              onToast && onToast("Signed out successfully.");
                             }}
                             className="w-full px-4 py-2 text-left text-body-sm text-error hover:bg-error-container/20 flex items-center gap-2"
                           >
@@ -482,10 +484,10 @@ export const Navbar = ({
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={onOpenAuth}
-                      className="bg-primary text-on-primary px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-xs sm:text-body-sm font-label-bold hover:bg-inverse-surface transition-colors cursor-pointer"
+                      className="bg-primary text-on-primary px-2 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-body-sm font-label-bold hover:bg-inverse-surface transition-colors cursor-pointer whitespace-nowrap"
                     >
                       Sign In
                     </button>
@@ -505,12 +507,12 @@ export const Navbar = ({
           {mobileSearchOpen && (
             <form
               onSubmit={handleSearch}
-              className="md:hidden flex items-center bg-surface-container-lowest rounded-lg overflow-hidden shadow-md border border-outline-variant/40 animate-fade-in"
+              className="md:hidden flex items-center bg-surface-container-lowest rounded-lg overflow-hidden shadow-md border border-outline-variant/40 animate-fade-in my-1"
             >
               <select
                 value={searchCategory}
                 onChange={(e) => setSearchCategory(e.target.value)}
-                className="bg-surface-container-low text-on-surface text-xs px-2 py-2 border-none focus:ring-0 cursor-pointer max-w-[110px]"
+                className="bg-surface-container-low text-on-surface text-xs px-2 py-2 border-none focus:ring-0 cursor-pointer max-w-[100px] truncate"
               >
                 <option>All</option>
                 <option value="cameras-audio">Cameras</option>
@@ -541,10 +543,10 @@ export const Navbar = ({
           )}
 
           {/* Categories Bar Navigation */}
-          <nav className="flex items-center gap-1.5 sm:gap-space-8 overflow-x-auto pb-1 text-xs sm:text-body-sm font-body-sm scrollbar-none -mx-1 px-1">
+          <nav className="flex items-center gap-1 sm:gap-space-8 overflow-x-auto pb-0.5 sm:pb-1 text-[11px] sm:text-body-sm font-body-sm scrollbar-none -mx-2.5 px-2.5 sm:mx-0 sm:px-0">
             <button
               onClick={() => onNavigate("home")}
-              className={`whitespace-nowrap px-2.5 sm:px-space-8 py-1 sm:py-space-2 rounded transition-colors ${
+              className={`whitespace-nowrap px-2 sm:px-space-8 py-0.5 sm:py-space-2 rounded text-[11px] sm:text-body-sm transition-colors ${
                 activePage === "home"
                   ? "bg-surface text-on-surface font-label-bold shadow-xs"
                   : "text-on-primary hover:text-secondary-fixed"
@@ -611,39 +613,39 @@ export const Navbar = ({
       </header>
 
       {/* Mobile Fixed Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-primary-container/95 backdrop-blur-md border-t border-outline/25 shadow-[0_-2px_12px_rgba(0,0,0,0.18)] px-2 py-1.5 flex items-center justify-around text-on-primary">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-primary-container/95 backdrop-blur-md border-t border-outline/25 shadow-[0_-2px_12px_rgba(0,0,0,0.18)] px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] flex items-center justify-around text-on-primary">
         <button
           onClick={() => onNavigate("home")}
-          className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded transition-colors ${
+          className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded transition-colors cursor-pointer ${
             activePage === "home"
               ? "text-secondary-fixed font-bold"
               : "text-on-primary/80 hover:text-on-primary"
           }`}
         >
-          <span className="material-symbols-outlined text-[22px]">home</span>
+          <span className="material-symbols-outlined text-[21px]">home</span>
           <span className="text-[10px] leading-tight">Home</span>
         </button>
 
         <button
           onClick={() => onNavigate("search")}
-          className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded transition-colors ${
+          className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded transition-colors cursor-pointer ${
             activePage === "search"
               ? "text-secondary-fixed font-bold"
               : "text-on-primary/80 hover:text-on-primary"
           }`}
         >
-          <span className="material-symbols-outlined text-[22px]">search</span>
+          <span className="material-symbols-outlined text-[21px]">search</span>
           <span className="text-[10px] leading-tight">Search</span>
         </button>
 
         {/* Highlighted Sell / Rent action */}
         <button
           onClick={onOpenAddProduct}
-          className="flex flex-col items-center -mt-3.5 group"
+          className="flex flex-col items-center -mt-3.5 group cursor-pointer"
           title="List Item"
         >
-          <div className="w-11 h-11 rounded-full bg-secondary text-on-secondary flex items-center justify-center shadow-lg border-2 border-primary-container group-hover:scale-105 group-active:scale-95 transition-transform">
-            <span className="material-symbols-outlined text-[24px]">add</span>
+          <div className="w-10 h-10 rounded-full bg-secondary text-on-secondary flex items-center justify-center shadow-lg border-2 border-primary-container group-hover:scale-105 group-active:scale-95 transition-transform">
+            <span className="material-symbols-outlined text-[22px]">add</span>
           </div>
           <span className="text-[10px] font-bold text-secondary-fixed mt-0.5 leading-tight">
             Sell/Rent
@@ -652,13 +654,13 @@ export const Navbar = ({
 
         <button
           onClick={() => onNavigate("orders")}
-          className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded transition-colors ${
+          className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded transition-colors cursor-pointer ${
             activePage === "orders"
               ? "text-secondary-fixed font-bold"
               : "text-on-primary/80 hover:text-on-primary"
           }`}
         >
-          <span className="material-symbols-outlined text-[22px]">
+          <span className="material-symbols-outlined text-[21px]">
             receipt_long
           </span>
           <span className="text-[10px] leading-tight">Orders</span>
@@ -666,13 +668,17 @@ export const Navbar = ({
 
         <button
           onClick={onOpenCart}
-          className="relative flex flex-col items-center gap-0.5 px-2 py-1 rounded text-on-primary/80 hover:text-on-primary transition-colors"
+          className={`relative flex flex-col items-center gap-0.5 px-2 py-1 rounded transition-colors cursor-pointer ${
+            activePage === "checkout"
+              ? "text-secondary-fixed font-bold"
+              : "text-on-primary/80 hover:text-on-primary"
+          }`}
         >
-          <span className="material-symbols-outlined text-[22px]">
+          <span className="material-symbols-outlined text-[21px]">
             shopping_bag
           </span>
           {cartCount > 0 && (
-            <span className="absolute top-0.5 right-2 bg-secondary text-on-secondary text-[10px] font-bold rounded-full px-1 py-0 leading-none">
+            <span className="absolute top-0 right-1.5 bg-secondary text-on-secondary text-[9px] font-bold rounded-full px-1 py-0 leading-none">
               {cartCount}
             </span>
           )}

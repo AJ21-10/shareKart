@@ -10,7 +10,8 @@ import {
   updateProfile,
   changePassword,
   sendRegistrationOtp,
-  verifyRegistrationOtp
+  verifyRegistrationOtp,
+  verifyPhoneEmail
 } from '../controllers/authController.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validator.js';
@@ -121,6 +122,7 @@ router.post('/verify-registration-otp', validateBody(verifyOtpRules), verifyRegi
 router.post('/verify-aadhaar', authenticateToken, validateBody(verifyAadhaarRules), verifyAadhaar);
 router.post('/change-password', authenticateToken, validateBody(changePasswordRules), changePassword);
 router.put('/profile', authenticateToken, validateBody(updateProfileRules), updateProfile);
+router.post('/phone-email-verify', verifyPhoneEmail);
 router.get('/profile/:id?', authenticateToken, getUserProfile);
 router.get('/me', authenticateToken, getMe);
 router.get('/demo-users', getDemoUsers);

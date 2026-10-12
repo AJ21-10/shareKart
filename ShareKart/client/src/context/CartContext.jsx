@@ -1,40 +1,87 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { useAuth } from './AuthContext';
 
 const CartContext = createContext(null);
 
-export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sharekart_cart');
-      return saved ? JSON.parse(saved) : [
-        // Seed default items from UI design (2 items in badge)
-        {
-          id: 1,
-          title: 'Sony Alpha A6400 Mirrorless Camera',
-          type: 'rent',
-          price: 850,
-          deposit: 3500,
-          days: 3,
-          image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB9l8s94eHGoE5SEWQdGdOGHhgKajHzqfX_gDrZlbFQNbWjaZgx4xlDfSjspD46yrrdmCSUPfZ_b0-kUjK2lVvM03JSrkH96mVUZmeokyrAPAUgOQIRVkn8OxFOlfiUL88oykuWH83dT8_k4sF-ahnhoTsXXoK-WBlOOj1gaKZE2Jhpllbe2ivrt1F1tMAdWsNpWGgqzb_d-18Br2X5TwKxJUMTJCUcqaJYgvNWemO5f4JSkoxFYThGGg'
-        },
-        {
-          id: 2,
-          title: 'Bosch Professional Hammer Drill 800W',
-          type: 'rent',
-          price: 350,
-          deposit: 1500,
-          days: 2,
-          image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDBFDSQ5IBN7WBs2FdMYV60uVkfVwA90SyISdGPuvYQnJmaThMfwT_UEq7DmQNAv1BjMEfpS6fBZez8gqaZ-hIsHX8b0CWkSWoivb-fEDJUOT05DuN8BF54Hmk-jWiJ9W4aGx3txOOh2eenRpDj3Bzs8Eqvnt_wjFATaZvyvlnbig0gY9Ue1tmmkiTE3Jl3g3EZur6Ct4RjYCuOQu9EPgtNw7BEBJb2Ecc-EJj3h2ZIeKusEHoOVSZKww'
-        }
-      ];
-    } catch {
+const getStorageKey = (uid) => (uid ? `sharekart_cart_${uid}` : 'sharekart_cart_guest');
+
+const isMockSeed = (items) => {
+  if (!Array.isArray(items) || items.length === 0) return false;
+  return items.some(
+    (item) =>
+      item?.title === 'Sony Alpha A6400 Mirrorless Camera' ||
+      item?.title === 'Bosch Professional Hammer Drill 800W'
+  );
+};
+
+const readCartFromStorage = (key) => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || isMockSeed(parsed)) {
+      localStorage.removeItem(key);
       return [];
     }
+    return parsed;
+  } catch {
+    return [];
+  }
+};
+
+export const CartProvider = ({ children }) => {
+  const { user } = useAuth();
+  const currentUserId = user?.id || null;
+  const activeUserIdRef = useRef(currentUserId);
+  const isInitialMount = useRef(true);
+
+  // Clean up legacy mock data from old 'sharekart_cart' key if present
+  useEffect(() => {
+    try {
+      const oldRaw = localStorage.getItem('sharekart_cart');
+      if (oldRaw) {
+        const oldParsed = JSON.parse(oldRaw);
+        if (isMockSeed(oldParsed)) {
+          localStorage.removeItem('sharekart_cart');
+        }
+      }
+    } catch {}
+  }, []);
+
+  const [cartItems, setCartItems] = useState(() => {
+    const key = getStorageKey(currentUserId);
+    const saved = readCartFromStorage(key);
+    if (saved !== null) return saved;
+
+    // Check legacy key if exists and not mock
+    const legacy = readCartFromStorage('sharekart_cart');
+    if (legacy !== null && legacy.length > 0) return legacy;
+
+    return [];
   });
 
+  // When active user changes (e.g., newly registered user logs in, persona switches, or logout)
   useEffect(() => {
-    localStorage.setItem('sharekart_cart', JSON.stringify(cartItems));
-  }, [cartItems]);
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    if (activeUserIdRef.current !== currentUserId) {
+      activeUserIdRef.current = currentUserId;
+      const key = getStorageKey(currentUserId);
+      const saved = readCartFromStorage(key);
+      setCartItems(saved || []);
+    }
+  }, [currentUserId]);
+
+  // Persist cart items only for the active user that owns these items
+  useEffect(() => {
+    if (activeUserIdRef.current === currentUserId) {
+      const key = getStorageKey(currentUserId);
+      localStorage.setItem(key, JSON.stringify(cartItems));
+    }
+  }, [cartItems, currentUserId]);
 
   const addToCart = (product, type = 'rent', days = 3) => {
     setCartItems(prev => {
@@ -60,6 +107,10 @@ export const CartProvider = ({ children }) => {
 
   const clearCart = () => {
     setCartItems([]);
+    const key = getStorageKey(currentUserId);
+    localStorage.removeItem(key);
+    localStorage.removeItem('sharekart_cart');
+    localStorage.removeItem('sharekart_cart_guest');
   };
 
   return (

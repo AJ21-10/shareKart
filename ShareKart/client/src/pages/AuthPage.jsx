@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
 import { api } from "../services/api";
 
 export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
@@ -11,6 +12,7 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
     isAuthenticated,
     user,
   } = useAuth();
+  const { clearCart } = useCart();
 
   // Mode: 'login' or 'register'
   const [mode, setMode] = useState(initialMode);
@@ -31,12 +33,12 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(true);
 
-  // Instant Phone OTP state for Registration
+  // Phone OTP state for Registration
   const [regOtp, setRegOtp] = useState(["", "", "", "", "", ""]);
+  const [currentLiveOtp, setCurrentLiveOtp] = useState("123456");
   const [otpSent, setOtpSent] = useState(false);
   const [otpSending, setOtpSending] = useState(false);
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
-  const [activeOtpCode, setActiveOtpCode] = useState("481902");
   const [otpCountdown, setOtpCountdown] = useState(0);
   const [otpError, setOtpError] = useState("");
   const [verifyingOtp, setVerifyingOtp] = useState(false);
@@ -52,8 +54,6 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
     setError("");
     setSuccessMsg("");
   }, [initialMode]);
-
-
 
   // Countdown timer for OTP resend
   useEffect(() => {
@@ -77,7 +77,38 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
     }
   };
 
-  // Instant hardcoded OTP dispatch
+  // Listen for Phone.Email postMessage event
+  useEffect(() => {
+    const handlePhoneEmailMessage = async (event) => {
+      if (event.data && event.data.user_json_url) {
+        try {
+          const res = await api.verifyPhoneEmail(event.data.user_json_url);
+          if (res && res.success) {
+            const rawPhone = res.user?.phone
+              ? res.user.phone.replace(/\D/g, "").slice(-10)
+              : regPhone;
+            setIsPhoneVerified(true);
+            setVerifiedPhone(rawPhone);
+            setRegPhone(rawPhone);
+            setOtpSent(false);
+            setOtpError("");
+            onToast &&
+              onToast("✅ Mobile number verified successfully via Phone.Email!");
+          }
+        } catch (err) {
+          console.error("Phone.Email postMessage failed", err);
+        }
+      }
+    };
+
+    window.addEventListener("message", handlePhoneEmailMessage);
+    return () => window.removeEventListener("message", handlePhoneEmailMessage);
+  }, [regPhone, onToast]);
+
+  // [COMMENTED OUT] Backup / Fallback OTP as requested
+  // const HARDCODED_OTP = "123456";
+
+  // Send SMS OTP
   const handleSendPhoneOtp = async () => {
     setOtpError("");
     const cleanPhone = regPhone.replace(/\D/g, "").slice(-10);
@@ -89,11 +120,20 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
     }
 
     setOtpSending(true);
+
+    // Request Real SMS OTP via Phone.Email backend gateway
     try {
+      let toastMsg = `📲 SMS OTP sent to +91 ${cleanPhone}! Check your mobile SMS inbox.`;
       try {
-        await api.sendRegistrationOtp(cleanPhone);
+        const res = await api.sendRegistrationOtp(cleanPhone);
+        if (res && res.message) {
+          toastMsg = `📲 ${res.message}`;
+        }
       } catch (backendErr) {
-        if (backendErr.message && backendErr.message.toLowerCase().includes("already exists")) {
+        if (
+          backendErr.message &&
+          backendErr.message.toLowerCase().includes("already exists")
+        ) {
           setOtpError(backendErr.message);
           onToast && onToast(`⚠️ ${backendErr.message}`);
           setOtpSending(false);
@@ -101,70 +141,60 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
         }
       }
 
-      const code = "481902";
-      setActiveOtpCode(code);
       setOtpSent(true);
-      setOtpCountdown(45);
+      setOtpCountdown(30);
       setOtpError("");
-      onToast && onToast(`📲 ShareKart Verification Code: ${code}`);
+      setRegOtp(["", "", "", "", "", ""]);
+      onToast && onToast(toastMsg);
+    } catch (err) {
+      console.error("OTP send error:", err);
+      setOtpError("Failed to send SMS OTP. Please check your network and retry.");
+      onToast && onToast(`❌ Failed to send SMS OTP.`);
     } finally {
       setOtpSending(false);
     }
   };
 
-  const handleAutoFillOtp = () => {
-    const code = activeOtpCode || "481902";
-    const digits = code.split("").slice(0, 6);
-    setRegOtp(digits);
-    handleVerifyPhoneOtp(code);
-  };
-
-  // Verify instant OTP code
+  // Verify Real SMS OTP code
   const handleVerifyPhoneOtp = async (inputCode) => {
     setOtpError("");
     const cleanPhone = regPhone.replace(/\D/g, "").slice(-10);
     const code = (inputCode !== undefined ? inputCode : regOtp.join("")).trim();
 
     if (!code || code.length !== 6) {
-      const msg = "Please enter the complete 6-digit OTP code.";
+      const msg = "Please enter the 6-digit SMS OTP received on your mobile.";
       setOtpError(msg);
       onToast && onToast(`⚠️ ${msg}`);
       return;
     }
 
     setVerifyingOtp(true);
-    const validCodes = ["481902", "123456", "000000", "111111", "654321"];
-    if (validCodes.includes(code) || code === activeOtpCode) {
-      setIsPhoneVerified(true);
-      setVerifiedPhone(cleanPhone);
-      setOtpError("");
-      onToast && onToast("✅ Mobile number verified successfully!");
-      setVerifyingOtp(false);
-      return;
-    }
-
     try {
-      const res = await api.verifyRegistrationOtp(cleanPhone, code);
-      if (res.success || validCodes.includes(code)) {
+      /*
+      // [COMMENTED OUT] Backup / Fallback hardcoded OTP checks
+      if (code === HARDCODED_OTP || code === "481902") {
         setIsPhoneVerified(true);
         setVerifiedPhone(cleanPhone);
         setOtpError("");
         onToast && onToast("✅ Mobile number verified successfully!");
+        return;
+      }
+      */
+
+      // Check with Phone.Email backend
+      const res = await api.verifyRegistrationOtp(cleanPhone, code, regName);
+      if (res && res.success) {
+        setIsPhoneVerified(true);
+        setVerifiedPhone(cleanPhone);
+        setOtpError("");
+        onToast && onToast("✅ Mobile number verified successfully via Phone.Email!");
       } else {
-        const msg = res.message || "Invalid OTP code. Please enter 481902.";
-        setOtpError(msg);
-        onToast && onToast(`❌ ${msg}`);
+        throw new Error(res.message || "Invalid OTP code");
       }
     } catch (err) {
-      if (validCodes.includes(code)) {
-        setIsPhoneVerified(true);
-        setVerifiedPhone(cleanPhone);
-        setOtpError("");
-        onToast && onToast("✅ Mobile number verified successfully!");
-      } else {
-        setOtpError("Invalid OTP code. Please enter 481902.");
-        onToast && onToast("❌ Invalid OTP code. Please enter 481902.");
-      }
+      const msg = err.message || "Invalid OTP code. Please check your SMS and enter the 6-digit code received.";
+      setOtpError(msg);
+      onToast && onToast(`❌ ${msg}`);
     } finally {
       setVerifyingOtp(false);
     }
@@ -256,25 +286,31 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
     setSuccessMsg("");
 
     if (!regName.trim()) {
-      setError("Please enter your full name.");
+      const msg = "Please enter your full name.";
+      setError(msg);
+      onToast && onToast(`⚠️ ${msg}`);
       return;
     }
 
     if (!regEmail.trim() || !regEmail.includes("@")) {
-      setError("Please enter a valid email address.");
+      const msg = "Please enter a valid email address.";
+      setError(msg);
+      onToast && onToast(`⚠️ ${msg}`);
       return;
     }
 
     const cleanPhone = regPhone.replace(/\D/g, "").slice(-10);
     if (!cleanPhone || cleanPhone.length !== 10) {
-      setError("Please enter a valid 10-digit Indian phone number.");
+      const msg = "Please enter a valid 10-digit Indian mobile number.";
+      setError(msg);
+      onToast && onToast(`⚠️ ${msg}`);
       return;
     }
 
-    if (!isPhoneVerified) {
-      setError(
-        "Please verify your mobile number with the real-time OTP first.",
-      );
+    if (!isPhoneVerified || cleanPhone !== verifiedPhone) {
+      const msg = "Please verify your mobile number with the SMS OTP first.";
+      setError(msg);
+      onToast && onToast(`⚠️ ${msg}`);
       if (!otpSent) {
         handleSendPhoneOtp();
       }
@@ -282,19 +318,23 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
     }
 
     if (!regPassword || regPassword.length < 6) {
-      setError("Password must be at least 6 characters long.");
+      const msg = "Password must be at least 6 characters long.";
+      setError(msg);
+      onToast && onToast(`⚠️ ${msg}`);
       return;
     }
 
     if (regPassword !== regConfirmPassword) {
-      setError("Passwords do not match. Please verify your password.");
+      const msg = "Passwords do not match. Please verify your password.";
+      setError(msg);
+      onToast && onToast(`⚠️ ${msg}`);
       return;
     }
 
     if (!agreeTerms) {
-      setError(
-        "Please agree to the Sharekart Terms & P2P Escrow Policy to proceed.",
-      );
+      const msg = "Please agree to the Sharekart Terms & P2P Escrow Policy to proceed.";
+      setError(msg);
+      onToast && onToast(`⚠️ ${msg}`);
       return;
     }
 
@@ -310,6 +350,7 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
       );
 
       if (res.success) {
+        clearCart();
         setSuccessMsg("Account created successfully! Redirecting...");
         onToast &&
           onToast("Account created successfully! Welcome to Sharekart.");
@@ -658,7 +699,7 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
                       required
                       value={regName}
                       onChange={(e) => setRegName(e.target.value)}
-                      placeholder="e.g. Pushpender Singh"
+                      placeholder="e.g. John Doe"
                       className="w-full bg-surface-container-low border border-outline-variant rounded-xl pl-9 pr-3 py-2 text-xs sm:text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                     />
                   </div>
@@ -678,7 +719,7 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
                       required
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
-                      placeholder="e.g. pushpender@gmail.com"
+                      placeholder="e.g. johndoe123@gmail.com"
                       className="w-full bg-surface-container-low border border-outline-variant rounded-xl pl-9 pr-3 py-2 text-xs sm:text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                     />
                   </div>
@@ -716,7 +757,7 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
                         value={regPhone}
                         onChange={handlePhoneChange}
                         disabled={isPhoneVerified}
-                        placeholder="98765 43210"
+                        placeholder="98765 12345"
                         className={`w-full bg-transparent px-3 py-2 text-xs sm:text-body-sm font-bold font-mono text-on-surface focus:outline-none ${
                           isPhoneVerified ? "opacity-75 cursor-not-allowed" : ""
                         }`}
@@ -776,6 +817,7 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
                     )}
                   </div>
 
+
                   {/* Error message always visible right below phone input */}
                   {otpError && !otpSent && (
                     <div className="mt-1 text-[11px] text-error font-medium flex items-center gap-1 bg-error/10 px-2.5 py-1.5 rounded-lg border border-error/20 animate-fade-in">
@@ -789,31 +831,29 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
                   {/* OTP Entry Field */}
                   {otpSent && !isPhoneVerified && (
                     <div className="mt-1.5 p-3.5 bg-surface-container-low rounded-xl border border-primary/30 flex flex-col gap-2.5 animate-fade-in">
-                      {/* Instant Code Display and Auto-fill Button */}
-                      <div className="bg-surface-container-lowest border border-primary/30 rounded-lg p-2.5 flex items-center justify-between shadow-xs">
-                        <div className="flex items-center gap-1.5 text-xs text-on-surface">
-                          <span className="material-symbols-outlined text-primary text-[18px]">
-                            verified_user
+                      {/* [COMMENTED OUT] Backup / Fallback OTP Banner as requested */}
+                      {/*
+                      <div className="bg-surface-container-lowest border border-secondary/30 rounded-lg p-2.5 flex items-center justify-between shadow-xs">
+                        <div className="flex items-center gap-2 text-xs text-on-surface">
+                          <span className="material-symbols-outlined text-secondary text-[20px]">
+                            sms
                           </span>
-                          <span className="text-[11px] text-on-surface-variant font-mono">
-                            OTP:
+                          <span className="text-[11px] text-on-surface-variant font-medium">
+                            OTP Code: <strong className="text-secondary font-mono text-xs">{currentLiveOtp}</strong>
                           </span>
-                          <strong className="font-mono text-sm font-bold tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
-                            {activeOtpCode || "481902"}
-                          </strong>
                         </div>
                         <button
                           type="button"
-                          onClick={handleAutoFillOtp}
-                          className="text-[11px] font-bold bg-primary text-on-primary px-2.5 py-1 rounded shadow-xs hover:bg-primary/90 transition-all cursor-pointer flex items-center gap-1"
-                          title="Click to auto-fill code and verify instantly"
+                          onClick={() => {
+                            setRegOtp(currentLiveOtp.split(""));
+                            onToast && onToast(`Auto-filled OTP: ${currentLiveOtp}!`);
+                          }}
+                          className="text-[10px] text-secondary font-bold bg-secondary/10 hover:bg-secondary/20 px-2.5 py-1 rounded-md border border-secondary/20 transition cursor-pointer"
                         >
-                          <span className="material-symbols-outlined text-[13px]">
-                            bolt
-                          </span>
-                          Auto-fill OTP
+                          Auto-Fill {currentLiveOtp}
                         </button>
                       </div>
+                      */}
 
                       {/* 6-Digit OTP Input Boxes */}
                       <div>
