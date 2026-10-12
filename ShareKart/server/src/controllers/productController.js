@@ -152,7 +152,7 @@ export const getProductById = async (req, res, next) => {
     const product = await db.get(query, [id]);
 
     if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found.' });
+      return res.sendError(404, 'Product not found.', null, 'NOT_FOUND');
     }
 
     // Parse JSON attributes
@@ -183,10 +183,7 @@ export const createProduct = async (req, res, next) => {
   try {
     const seller_id = req.user.id;
     if (!req.user.is_aadhaar_verified) {
-      return res.status(403).json({
-        success: false,
-        message: 'Aadhaar verification is required to list products. Please verify your Aadhaar to continue.'
-      });
+      return res.sendError(403, 'Aadhaar verification is required to list products. Please verify your Aadhaar to continue.', null, 'AADHAAR_REQUIRED');
     }
     const {
       title,
@@ -210,7 +207,7 @@ export const createProduct = async (req, res, next) => {
     } = req.body;
 
     if (!title || !category_id || !transaction_type) {
-      return res.status(400).json({ success: false, message: 'Title, category, and transaction type are required.' });
+      return res.sendError(400, 'Title, category, and transaction type are required.', null, 'BAD_REQUEST');
     }
 
     const defaultImages = [
@@ -261,6 +258,8 @@ export const createProduct = async (req, res, next) => {
 
     const newProductId = result.lastInsertRowid || result.rows?.[0]?.id;
 
+    res.setHeader('Location', `/api/products/${newProductId}`);
+
     res.status(201).json({
       success: true,
       message: 'Product listed successfully on Sharekart!',
@@ -279,11 +278,11 @@ export const updateProduct = async (req, res, next) => {
 
     const product = await db.get('SELECT * FROM products WHERE id = ?', [id]);
     if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found.' });
+      return res.sendError(404, 'Product not found.', null, 'NOT_FOUND');
     }
 
     if (product.seller_id !== userId) {
-      return res.status(403).json({ success: false, message: 'You can only update your own listings.' });
+      return res.sendError(403, 'You can only update your own listings.', null, 'FORBIDDEN');
     }
 
     const updates = [];

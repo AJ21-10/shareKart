@@ -32,7 +32,7 @@ export const sendMessage = async (req, res, next) => {
     const { receiverId = 2, productId = 1, content } = req.body;
 
     if (!content || !content.trim()) {
-      return res.status(400).json({ success: false, message: 'Message content cannot be empty.' });
+      return res.sendError(400, 'Message content cannot be empty.', null, 'BAD_REQUEST');
     }
 
     const insertSql = `

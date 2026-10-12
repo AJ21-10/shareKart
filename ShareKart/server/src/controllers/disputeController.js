@@ -25,7 +25,7 @@ export const createDispute = async (req, res, next) => {
     const { rental_id, product_title, item_category, claim_amount, deposit_amount, issue_type, tag_label, description } = req.body;
     
     if (!product_title || !claim_amount) {
-      return res.status(400).json({ success: false, message: 'Product title and claim amount are required.' });
+      return res.sendError(400, 'Product title and claim amount are required.', null, 'BAD_REQUEST');
     }
 
     const disputeId = `DSP-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -37,9 +37,17 @@ export const createDispute = async (req, res, next) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
+    let validRentalId = null;
+    if (rental_id) {
+      const existingRental = await db.get('SELECT id FROM rentals WHERE id = ?', [rental_id]);
+      if (existingRental) {
+        validRentalId = existingRental.id;
+      }
+    }
+
     await db.run(insertSql, [
       disputeId,
-      rental_id || 'SK-8921',
+      validRentalId,
       product_title,
       item_category || 'General',
       complainant,
@@ -55,6 +63,7 @@ export const createDispute = async (req, res, next) => {
 
     const dispute = await db.get('SELECT * FROM disputes WHERE id = ?', [disputeId]);
 
+    res.setHeader('Location', `/api/disputes/${disputeId}`);
     res.status(201).json({
       success: true,
       message: `Dispute claim #${disputeId} registered and submitted for arbitration.`,
@@ -72,7 +81,7 @@ export const resolveDispute = async (req, res, next) => {
 
     const dispute = await db.get('SELECT * FROM disputes WHERE id = ?', [id]);
     if (!dispute) {
-      return res.status(404).json({ success: false, message: 'Dispute not found' });
+      return res.sendError(404, 'Dispute not found', null, 'NOT_FOUND');
     }
 
     await db.run(`
