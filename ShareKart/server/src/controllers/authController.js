@@ -423,14 +423,19 @@ export const sendRegistrationOtp = async (req, res, next) => {
         console.log(`[Phone.Email SMS SENT] 📲 Real SMS dispatched to: +91 ${cleanPhone}`);
         console.log(`[Phone.Email SMS SENT] ⏱️ Check your mobile handset inbox!`);
         console.log(`========================================\n`);
+      } else if (peData.flag === 4) {
+        peStatusMessage = 'Phone.Email limit reached: Maximum permitted login attempts exceeded. Please wait for cooldown or try later.';
+        console.warn(`\n[Phone.Email RATE-LIMIT] ⚠️ Flag 4: Maximum permitted login attempts reached on Phone.Email gateway.\n`);
       } else if (peData.flag === 7) {
         peStatusMessage = 'OTP was recently sent to your phone. Valid for 3 mins.';
         console.log(`[Phone.Email] Rate-limit cooldown (3 mins) for: +91 ${cleanPhone}`);
       } else {
+        peStatusMessage = `Phone.Email gateway returned status: ${JSON.stringify(peData)}`;
         console.log(`[Phone.Email] Gateway status: ${JSON.stringify(peData)}`);
       }
     } catch (peErr) {
       console.warn(`[Phone.Email] Gateway connection note: ${peErr.message}`);
+      peStatusMessage = `Network error connecting to Phone.Email: ${peErr.message}`;
     }
 
     /*
@@ -441,14 +446,19 @@ export const sendRegistrationOtp = async (req, res, next) => {
     registrationOtps.set(cleanPhone, { otp: dynamicOtp, expiresAt });
     */
 
+    if (!peSuccess) {
+      return res.status(400).json({
+        success: false,
+        message: peStatusMessage || 'Phone.Email gateway could not dispatch SMS.',
+        realSmsSent: false
+      });
+    }
+
     res.json({
       success: true,
-      message: peSuccess
-        ? `Real SMS OTP sent to +91 ${cleanPhone} via Phone.Email!`
-        : (peStatusMessage || `OTP sent to +91 ${cleanPhone}`),
+      message: `Real SMS OTP sent to +91 ${cleanPhone} via Phone.Email!`,
       phone: `+91 ${cleanPhone}`,
-      // otp: dynamicOtp, // [COMMENTED OUT]
-      realSmsSent: peSuccess,
+      realSmsSent: true,
       expiresInSeconds: 300
     });
   } catch (error) {
