@@ -8,12 +8,12 @@ export const authenticateToken = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ success: false, message: 'Authentication required. No token provided.' });
+    return res.sendError(401, 'Authentication required. No token provided.', null, 'UNAUTHORIZED');
   }
 
   jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) {
-      return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
+      return res.sendError(403, 'Invalid or expired token.', null, 'FORBIDDEN');
     }
 
     try {
@@ -22,7 +22,7 @@ export const authenticateToken = (req, res, next) => {
         [decoded.id]
       );
       if (!user) {
-        return res.status(404).json({ success: false, message: 'User not found.' });
+        return res.sendError(404, 'User not found.', null, 'NOT_FOUND');
       }
 
       req.user = user;

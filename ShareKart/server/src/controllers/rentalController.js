@@ -7,7 +7,7 @@ export const calculateCost = async (req, res, next) => {
 
     const product = await db.get('SELECT * FROM products WHERE id = ?', [productId]);
     if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found.' });
+      return res.sendError(404, 'Product not found.', null, 'NOT_FOUND');
     }
 
     if (orderType === 'buy') {
@@ -70,10 +70,7 @@ export const checkout = async (req, res, next) => {
   try {
     const userId = req.user.id;
     if (!req.user.is_aadhaar_verified) {
-      return res.status(403).json({
-        success: false,
-        message: 'Aadhaar verification is required to rent or buy items. Please verify your Aadhaar to continue.'
-      });
+      return res.sendError(403, 'Aadhaar verification is required to rent or buy items. Please verify your Aadhaar to continue.', null, 'AADHAAR_REQUIRED');
     }
     const {
       productId,
@@ -88,7 +85,7 @@ export const checkout = async (req, res, next) => {
 
     const product = await db.get('SELECT * FROM products WHERE id = ?', [productId]);
     if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found.' });
+      return res.sendError(404, 'Product not found.', null, 'NOT_FOUND');
     }
 
     let rentFee = 0;
@@ -158,9 +155,44 @@ export const checkout = async (req, res, next) => {
       rental.product_images = parseJson(rental.product_images, []);
     }
 
+    // Set Location header for newly created order resource
+    res.setHeader('Location', `/api/rentals/${orderId}`);
+
     res.status(201).json({
       success: true,
       message: 'Booking completed successfully! Payment held in 256-bit Razorpay Escrow.',
+      order: rental
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getRentalById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const rental = await db.get(`
+      SELECT r.*, p.title as product_title, p.images as product_images, u.name as seller_name
+      FROM rentals r
+      JOIN products p ON r.product_id = p.id
+      JOIN users u ON p.seller_id = u.id
+      WHERE r.id = ?
+    `, [id]);
+
+    if (!rental) {
+      return res.sendError(404, 'Rental order not found.', null, 'NOT_FOUND');
+    }
+
+    if (rental.user_id !== userId && rental.seller_id !== userId) {
+      return res.sendError(403, 'Not authorized to view this order.', null, 'FORBIDDEN');
+    }
+
+    rental.product_images = parseJson(rental.product_images, []);
+
+    res.json({
+      success: true,
       order: rental
     });
   } catch (error) {
@@ -216,12 +248,12 @@ export const updateRentalStatus = async (req, res, next) => {
     `, [id]);
 
     if (!rental) {
-      return res.status(404).json({ success: false, message: 'Rental order not found.' });
+      return res.sendError(404, 'Rental order not found.', null, 'NOT_FOUND');
     }
 
     // Only buyer or seller can update status
     if (rental.user_id !== userId && rental.seller_id !== userId) {
-      return res.status(403).json({ success: false, message: 'Not authorized to modify this order.' });
+      return res.sendError(403, 'Not authorized to modify this order.', null, 'FORBIDDEN');
     }
 
     const updates = [];
@@ -262,7 +294,7 @@ export const completeReturn = async (req, res, next) => {
     `, [id]);
 
     if (!rental) {
-      return res.status(404).json({ success: false, message: 'Rental order not found.' });
+      return res.sendError(404, 'Rental order not found.', null, 'NOT_FOUND');
     }
 
     const refundAmount = rental.deposit_fee || 0;

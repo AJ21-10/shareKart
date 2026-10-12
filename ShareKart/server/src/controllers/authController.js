@@ -8,13 +8,13 @@ export const register = async (req, res, next) => {
     const { name, email, password, phone, location } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
+      return res.sendError(400, 'Name, email, and password are required.', null, 'BAD_REQUEST');
     }
 
     const cleanEmail = email.trim().toLowerCase();
     const existingUser = await db.get('SELECT id FROM users WHERE LOWER(email) = ?', [cleanEmail]);
     if (existingUser) {
-      return res.status(409).json({ success: false, message: 'An account with this email already exists. Please log in.' });
+      return res.sendError(409, 'An account with this email already exists. Please log in.', null, 'EMAIL_EXISTS');
     }
 
     // Check if phone number is already registered if provided
@@ -23,7 +23,7 @@ export const register = async (req, res, next) => {
       if (cleanPhoneDigits.length === 10) {
         const existingPhone = await db.get('SELECT id FROM users WHERE phone LIKE ?', [`%${cleanPhoneDigits}%`]);
         if (existingPhone) {
-          return res.status(409).json({ success: false, message: 'An account with this phone number already exists. Please log in.' });
+          return res.sendError(409, 'An account with this phone number already exists. Please log in.', null, 'PHONE_EXISTS');
         }
       }
     }
@@ -31,7 +31,7 @@ export const register = async (req, res, next) => {
     const passwordHash = bcrypt.hashSync(password, 10);
     const aadhaarHash = '#OK-' + Math.floor(10000 + Math.random() * 90000);
     const aadhaarNum = 'XXXX-XXXX-' + Math.floor(1000 + Math.random() * 9000);
-    // Default cartoon vector avatar (not a person's photo)
+    // Default cartoon vector avatar
     const defaultAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name.trim())}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
 
     const insertSql = `
@@ -57,6 +57,7 @@ export const register = async (req, res, next) => {
     );
     const token = generateToken(user.id);
 
+    res.setHeader('Location', `/api/auth/profile/${user.id}`);
     res.status(201).json({
       success: true,
       message: 'Account registered successfully. Welcome to Sharekart!',
@@ -73,7 +74,7 @@ export const login = async (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email or phone and password are required.' });
+      return res.sendError(400, 'Email or phone and password are required.', null, 'BAD_REQUEST');
     }
 
     const cleanInput = email.trim();
@@ -96,12 +97,12 @@ export const login = async (req, res, next) => {
     }
 
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid email/phone or password.' });
+      return res.sendError(401, 'Invalid email/phone or password.', null, 'INVALID_CREDENTIALS');
     }
 
     const isValid = bcrypt.compareSync(password, user.password_hash);
     if (!isValid) {
-      return res.status(401).json({ success: false, message: 'Invalid email/phone or password.' });
+      return res.sendError(401, 'Invalid email/phone or password.', null, 'INVALID_CREDENTIALS');
     }
 
     const token = generateToken(user.id);
@@ -129,7 +130,6 @@ export const getDemoUsers = async (req, res, next) => {
   try {
     const users = await db.all('SELECT id, name, email, phone, location, avatar_url, is_aadhaar_verified, aadhaar_hash, member_since, rating FROM users ORDER BY id ASC LIMIT 6');
     
-    // Attach quick tokens for frictionless demo switching
     const demoAccounts = users.map(u => ({
       ...u,
       token: generateToken(u.id)
@@ -148,10 +148,9 @@ export const otpLogin = async (req, res, next) => {
   try {
     const { phone } = req.body;
     if (!phone) {
-      return res.status(400).json({ success: false, message: 'Phone number is required.' });
+      return res.sendError(400, 'Phone number is required.', null, 'BAD_REQUEST');
     }
 
-    // Find user by phone or fallback to demo user 1 (Aarav Patel)
     let user = await db.get(
       'SELECT * FROM users WHERE phone LIKE ? OR phone LIKE ?',
       [`%${phone.slice(-10)}%`, `%${phone}%`]
@@ -213,7 +212,7 @@ export const getUserProfile = async (req, res, next) => {
     );
     
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      return res.sendError(404, 'User not found', null, 'NOT_FOUND');
     }
 
     const productRows = await db.all('SELECT * FROM products WHERE seller_id = ?', [userId]);
@@ -262,7 +261,7 @@ export const updateProfile = async (req, res, next) => {
     const { name, phone, location, city, pincode, avatar_url } = req.body;
 
     if (!name || !name.trim()) {
-      return res.status(400).json({ success: false, message: 'Name cannot be empty.' });
+      return res.sendError(400, 'Name cannot be empty.', null, 'BAD_REQUEST');
     }
 
     const updateSql = `
@@ -308,37 +307,25 @@ export const changePassword = async (req, res, next) => {
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: 'Current password and new password are required.'
-      });
+      return res.sendError(400, 'Current password and new password are required.', null, 'BAD_REQUEST');
     }
 
     if (newPassword.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: 'New password must be at least 6 characters long.'
-      });
+      return res.sendError(400, 'New password must be at least 6 characters long.', null, 'BAD_REQUEST');
     }
 
     if (currentPassword === newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: 'New password must be different from your current password.'
-      });
+      return res.sendError(400, 'New password must be different from your current password.', null, 'BAD_REQUEST');
     }
 
     const user = await db.get('SELECT id, password_hash FROM users WHERE id = ?', [userId]);
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found.' });
+      return res.sendError(404, 'User not found.', null, 'NOT_FOUND');
     }
 
     const isMatch = bcrypt.compareSync(currentPassword, user.password_hash);
     if (!isMatch) {
-      return res.status(400).json({
-        success: false,
-        message: 'Current password is incorrect. Please verify and try again.'
-      });
+      return res.sendError(400, 'Current password is incorrect. Please verify and try again.', null, 'INVALID_PASSWORD');
     }
 
     const passwordHash = bcrypt.hashSync(newPassword, 10);
@@ -360,17 +347,17 @@ export const sendRegistrationOtp = async (req, res, next) => {
   try {
     const { phone } = req.body;
     if (!phone) {
-      return res.status(400).json({ success: false, message: 'Mobile phone number is required.' });
+      return res.sendError(400, 'Mobile phone number is required.', null, 'BAD_REQUEST');
     }
     const cleanPhone = phone.replace(/\D/g, '').slice(-10);
     if (cleanPhone.length !== 10) {
-      return res.status(400).json({ success: false, message: 'Please provide a valid 10-digit Indian phone number.' });
+      return res.sendError(400, 'Please provide a valid 10-digit Indian phone number.', null, 'BAD_REQUEST');
     }
 
     // Check if phone is already registered
     const existing = await db.get('SELECT id FROM users WHERE phone LIKE ?', [`%${cleanPhone}%`]);
     if (existing) {
-      return res.status(409).json({ success: false, message: 'An account with this phone number already exists. Please log in instead.' });
+      return res.sendError(409, 'An account with this phone number already exists. Please log in instead.', null, 'PHONE_EXISTS');
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -392,7 +379,7 @@ export const verifyRegistrationOtp = async (req, res, next) => {
   try {
     const { phone, otp } = req.body;
     if (!phone || !otp) {
-      return res.status(400).json({ success: false, message: 'Mobile phone and OTP are required.' });
+      return res.sendError(400, 'Mobile phone and OTP are required.', null, 'BAD_REQUEST');
     }
     const cleanPhone = phone.replace(/\D/g, '').slice(-10);
     const stored = registrationOtps.get(cleanPhone);
@@ -407,12 +394,8 @@ export const verifyRegistrationOtp = async (req, res, next) => {
       });
     }
 
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid or expired OTP. Please enter the correct 6-digit code.'
-    });
+    return res.sendError(400, 'Invalid or expired OTP. Please enter the correct 6-digit code.', null, 'INVALID_OTP');
   } catch (error) {
     next(error);
   }
 };
-
