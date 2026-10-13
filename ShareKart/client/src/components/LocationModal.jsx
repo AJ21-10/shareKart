@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getCurrentLocation } from '../services/locationService';
 
 export const LocationModal = ({ isOpen, onClose, onToast }) => {
   const { currentLocation, updateLocation } = useAuth();
@@ -93,80 +94,25 @@ export const LocationModal = ({ isOpen, onClose, onToast }) => {
   };
 
   // Real-Time Browser Geolocation Detection with User Permission
-  const handleDetectLocation = () => {
+  const handleDetectLocation = async () => {
     setLocationError('');
     setDetecting(true);
 
-    if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported by your browser.');
-      setDetecting(false);
-      return;
-    }
+    const res = await getCurrentLocation();
+    setDetecting(false);
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-
-        try {
-          // Attempt reverse geocoding via OpenStreetMap Nominatim with timeout
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 4500);
-
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=16&addressdetails=1`,
-            { signal: controller.signal }
-          );
-          clearTimeout(timeoutId);
-
-          if (response.ok) {
-            const data = await response.json();
-            const addr = data.address || {};
-            const locality = addr.suburb || addr.neighbourhood || addr.residential || addr.road || 'Sector 7';
-            const city = addr.city || addr.town || addr.county || 'Gandhinagar';
-            const postcode = addr.postcode || '382010';
-            const locationStr = `${locality}, ${city} ${postcode}`;
-
-            setDetectedData({
-              str: locationStr,
-              lat: latitude.toFixed(4),
-              lon: longitude.toFixed(4)
-            });
-            handleSelectLocation(locationStr);
-          } else {
-            throw new Error('Reverse geocode failed');
-          }
-        } catch (err) {
-          // Fallback to coordinates-based real-time locality
-          console.warn('Reverse geocode network issue, using nearest detected hub', err);
-          const fallbackStr = `Gandhinagar (${latitude.toFixed(3)}°N, ${longitude.toFixed(3)}°E)`;
-          handleSelectLocation(fallbackStr);
-        } finally {
-          setDetecting(false);
-        }
-      },
-      (error) => {
-        setDetecting(false);
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            setLocationError('Location permission was denied. Please enable location access in your browser settings or select a nearby area below.');
-            break;
-          case error.POSITION_UNAVAILABLE:
-            setLocationError('Location information is currently unavailable. Please pick a nearby locality below.');
-            break;
-          case error.TIMEOUT:
-            setLocationError('Location request timed out. Please try again or select an area below.');
-            break;
-          default:
-            setLocationError('An error occurred while detecting location.');
-            break;
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
+    if (res.success && res.locationName) {
+      if (res.coords) {
+        setDetectedData({
+          str: res.locationName,
+          lat: res.coords.latitude.toFixed(4),
+          lon: res.coords.longitude.toFixed(4)
+        });
       }
-    );
+      handleSelectLocation(res.locationName);
+    } else {
+      setLocationError(res.message || 'An error occurred while detecting location.');
+    }
   };
 
   return (

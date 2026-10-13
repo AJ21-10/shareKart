@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
+import { getCurrentLocation } from "../services/locationService";
 
 export const ProfilePage = ({
   params = {},
@@ -28,6 +29,25 @@ export const ProfilePage = ({
   const [city, setCity] = useState("");
   const [pincode, setPincode] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [detectingLoc, setDetectingLoc] = useState(false);
+  const [locStatus, setLocStatus] = useState("");
+
+  const handleDetectCurrentLocation = async () => {
+    setDetectingLoc(true);
+    setLocStatus("Detecting live location...");
+    const res = await getCurrentLocation();
+    setDetectingLoc(false);
+    if (res.success && res.locationName) {
+      setLocation(res.locationName);
+      if (res.address?.city) setCity(res.address.city);
+      if (res.address?.postcode) setPincode(res.address.postcode);
+      setLocStatus("Live GPS location detected");
+      onToast && onToast(`📍 Location updated: ${res.locationName}`);
+    } else {
+      setLocStatus(res.message || "Permission denied.");
+      onToast && onToast(res.message || "Could not detect location");
+    }
+  };
 
   // Password change states
   const [currentPassword, setCurrentPassword] = useState("");
@@ -998,16 +1018,44 @@ export const ProfilePage = ({
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-label-bold text-on-surface">
-                      Neighborhood / Area
-                    </label>
-                    <input
-                      type="text"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      placeholder="e.g. Gandhinagar, Sector 7"
-                      className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3.5 py-2.5 text-xs sm:text-body-sm text-on-surface focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none"
-                    />
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-label-bold text-on-surface">
+                        Neighborhood / Area
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleDetectCurrentLocation}
+                        disabled={detectingLoc}
+                        className="inline-flex items-center gap-1 text-[11px] font-label-bold text-secondary hover:underline cursor-pointer disabled:opacity-50"
+                        title="Use device GPS to detect location"
+                      >
+                        <span className={`material-symbols-outlined text-[13px] ${detectingLoc ? 'animate-spin' : ''}`}>
+                          {detectingLoc ? 'progress_activity' : 'my_location'}
+                        </span>
+                        <span>{detectingLoc ? 'Detecting...' : 'Use Current Loc'}</span>
+                      </button>
+                    </div>
+                    <div className="relative flex items-center">
+                      <span className="material-symbols-outlined absolute left-3 text-[17px] text-on-surface-variant pointer-events-none">
+                        location_on
+                      </span>
+                      <input
+                        type="text"
+                        value={location}
+                        onChange={(e) => {
+                          setLocation(e.target.value);
+                          setLocStatus("");
+                        }}
+                        placeholder="e.g. Gandhinagar, Sector 7"
+                        className="w-full bg-surface-container-low border border-outline-variant rounded-xl pl-9 pr-3.5 py-2.5 text-xs sm:text-body-sm text-on-surface focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                    </div>
+                    {locStatus && (
+                      <span className="text-[11px] text-secondary flex items-center gap-1 mt-0.5">
+                        <span className="material-symbols-outlined text-[13px]">info</span>
+                        <span>{locStatus}</span>
+                      </span>
+                    )}
                   </div>
                 </div>
 

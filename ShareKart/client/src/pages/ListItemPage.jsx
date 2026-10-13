@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { getCurrentLocation } from '../services/locationService';
 
 export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast }) => {
-  const { user, currentLocation } = useAuth();
+  const { user, currentLocation, updateLocation } = useAuth();
 
   // Form State
   const [title, setTitle] = useState('Bosch Rotary Hammer Drill 800W with 5 drill bits & carry case');
@@ -52,9 +53,41 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
   const [pickupLocation, setPickupLocation] = useState(
     currentLocation || user?.location || 'Sector 21, Gandhinagar, Gujarat - 382021'
   );
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [locationStatus, setLocationStatus] = useState('');
+  const [locationMsg, setLocationMsg] = useState('');
   const [selfPickup, setSelfPickup] = useState(true);
   const [doorstepDelivery, setDoorstepDelivery] = useState(true);
   const [legalConsent, setLegalConsent] = useState(true);
+
+  const handleDetectLocation = async (isAuto = false) => {
+    setDetectingLocation(true);
+    if (!isAuto) {
+      setLocationMsg('Requesting browser GPS permission...');
+    }
+    const res = await getCurrentLocation();
+    setDetectingLocation(false);
+
+    if (res.success && res.locationName) {
+      setPickupLocation(res.locationName);
+      if (updateLocation) {
+        updateLocation(res.locationName);
+      }
+      setLocationStatus('success');
+      setLocationMsg(`Live location: ${res.locationName}`);
+      if (!isAuto && onToast) {
+        onToast(`📍 Current location applied: ${res.locationName}`);
+      }
+    } else {
+      setLocationStatus(res.code === 'PERMISSION_DENIED' ? 'denied' : 'error');
+      setLocationMsg(res.message || 'Could not detect location. You can enter it manually.');
+    }
+  };
+
+  useEffect(() => {
+    // Prompt user for browser location permission and use current live location on form load
+    handleDetectLocation(true);
+  }, []);
 
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -718,20 +751,58 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
 
             <div className="flex flex-col gap-space-16">
               <div className="flex flex-col gap-space-4">
-                <label className="font-label-bold text-label-bold text-on-surface">Pickup Micro-Market / Area</label>
+                <div className="flex items-center justify-between">
+                  <label className="font-label-bold text-label-bold text-on-surface">Pickup Micro-Market / Area <span className="text-error">*</span></label>
+                  <button
+                    type="button"
+                    onClick={() => handleDetectLocation(false)}
+                    disabled={detectingLocation}
+                    className="inline-flex items-center gap-1 text-xs font-label-bold text-secondary hover:underline cursor-pointer disabled:opacity-50"
+                    title="Request GPS permission and use your current live location"
+                  >
+                    <span className={`material-symbols-outlined text-[15px] ${detectingLocation ? 'animate-spin' : ''}`}>
+                      {detectingLocation ? 'progress_activity' : 'my_location'}
+                    </span>
+                    <span>{detectingLocation ? 'Detecting GPS...' : 'Use Current Location'}</span>
+                  </button>
+                </div>
                 <div className="flex items-center bg-surface-container-low px-space-16 py-space-12 rounded-lg gap-space-8 border border-outline-variant/40">
                   <span className="material-symbols-outlined text-[20px] text-secondary">location_on</span>
                   <input
                     type="text"
                     value={pickupLocation}
-                    onChange={(e) => setPickupLocation(e.target.value)}
+                    onChange={(e) => {
+                      setPickupLocation(e.target.value);
+                      setLocationStatus('');
+                      setLocationMsg('');
+                    }}
+                    placeholder="e.g. Infocity, Gandhinagar 382007"
                     className="font-body-md text-body-md text-on-surface flex-1 bg-transparent border-none focus:outline-none"
                   />
-                  <span className="text-badge font-badge text-secondary">Aadhaar Linked</span>
+                  <span className={`text-badge font-badge ${locationStatus === 'success' ? 'text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded' : 'text-secondary'}`}>
+                    {locationStatus === 'success' ? 'GPS Verified' : 'Aadhaar Linked'}
+                  </span>
                 </div>
-                <span className="text-badge font-badge text-on-surface-variant">
-                  Derived from Aadhaar verification. Buyers within 5-10 km see this listing first.
-                </span>
+                {locationMsg ? (
+                  <div className={`text-xs flex items-center gap-1.5 ${
+                    locationStatus === 'success'
+                      ? 'text-emerald-600 dark:text-emerald-400 font-medium'
+                      : locationStatus === 'denied'
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : detectingLocation
+                      ? 'text-secondary'
+                      : 'text-on-surface-variant'
+                  }`}>
+                    <span className={`material-symbols-outlined text-[14px] shrink-0 ${detectingLocation ? 'animate-spin' : ''}`}>
+                      {detectingLocation ? 'progress_activity' : locationStatus === 'success' ? 'check_circle' : locationStatus === 'denied' ? 'lock' : 'info'}
+                    </span>
+                    <span>{locationMsg}</span>
+                  </div>
+                ) : (
+                  <span className="text-badge font-badge text-on-surface-variant">
+                    Derived from your live GPS coordinates. Buyers within 5-10 km see this listing first.
+                  </span>
+                )}
               </div>
 
               {/* Map Preview with Privacy Mask */}

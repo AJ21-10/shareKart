@@ -1,14 +1,17 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import authRoutes from './routes/authRoutes.js';
-import productRoutes from './routes/productRoutes.js';
-import categoryRoutes from './routes/categoryRoutes.js';
-import rentalRoutes from './routes/rentalRoutes.js';
-import dashboardRoutes from './routes/dashboardRoutes.js';
-import messageRoutes from './routes/messageRoutes.js';
-import disputeRoutes from './routes/disputeRoutes.js';
-import { errorHandler, errorResponseMiddleware } from './middleware/errorHandler.js';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import authRoutes from "./routes/authRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
+import rentalRoutes from "./routes/rentalRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
+import messageRoutes from "./routes/messageRoutes.js";
+import disputeRoutes from "./routes/disputeRoutes.js";
+import {
+  errorHandler,
+  errorResponseMiddleware,
+} from "./middleware/errorHandler.js";
 
 dotenv.config();
 
@@ -16,33 +19,35 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-app.use(express.json({ limit: '15mb' }));
-app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
+app.use(express.json({ limit: "15mb" }));
+app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(errorResponseMiddleware);
 
 // API Health
-app.get('/api/health', (req, res) => {
+app.get("/api/health", (req, res) => {
   res.json({
-    status: 'ok',
-    app: 'Sharekart API Server',
-    version: '1.0.0',
-    timestamp: new Date().toISOString()
+    status: "ok",
+    app: "Sharekart API Server",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
   });
 });
 
 // API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/rentals', rentalRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/disputes', disputeRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/rentals", rentalRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/disputes", disputeRoutes);
 
 // Centralized error handling
 app.use(errorHandler);

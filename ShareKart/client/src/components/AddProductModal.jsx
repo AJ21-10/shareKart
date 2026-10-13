@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { getCurrentLocation } from '../services/locationService';
 
 export const AddProductModal = ({ isOpen, onClose, onProductCreated, onToast }) => {
-  const { user } = useAuth();
+  const { user, currentLocation, updateLocation } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [locationStatus, setLocationStatus] = useState('');
+  const [locationMsg, setLocationMsg] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     category_id: 'cameras-audio',
@@ -17,9 +21,40 @@ export const AddProductModal = ({ isOpen, onClose, onProductCreated, onToast }) 
     description: '',
     condition_tag: 'Used - Excellent',
     condition_score: '9 / 10',
-    location_name: user?.location || 'Gandhinagar, Sector 7',
+    location_name: currentLocation || user?.location || 'Gandhinagar, Sector 7',
     imageUrl: ''
   });
+
+  const handleDetectLocation = async (isAuto = false) => {
+    setDetectingLocation(true);
+    if (!isAuto) {
+      setLocationMsg('Requesting browser GPS permission...');
+    }
+    const res = await getCurrentLocation();
+    setDetectingLocation(false);
+
+    if (res.success && res.locationName) {
+      setFormData(prev => ({ ...prev, location_name: res.locationName }));
+      if (updateLocation) {
+        updateLocation(res.locationName);
+      }
+      setLocationStatus('success');
+      setLocationMsg(`Live location: ${res.locationName}`);
+      if (!isAuto && onToast) {
+        onToast(`📍 Current location applied: ${res.locationName}`);
+      }
+    } else {
+      setLocationStatus(res.code === 'PERMISSION_DENIED' ? 'denied' : 'error');
+      setLocationMsg(res.message || 'Could not detect location. You can enter it manually.');
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      // Prompt user for browser location permission and use current live location
+      handleDetectLocation(true);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -194,13 +229,55 @@ export const AddProductModal = ({ isOpen, onClose, onProductCreated, onToast }) 
           {/* Location & Handover */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-space-12">
             <div>
-              <label className="text-badge font-badge text-on-surface-variant block mb-1">Pickup Location</label>
-              <input
-                type="text"
-                value={formData.location_name}
-                onChange={e => setFormData({ ...formData, location_name: e.target.value })}
-                className="w-full bg-surface-container-low border border-outline-variant rounded p-2 sm:p-space-8 text-on-surface"
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-badge font-badge text-on-surface-variant block">Pickup Location *</label>
+                <button
+                  type="button"
+                  onClick={() => handleDetectLocation(false)}
+                  disabled={detectingLocation}
+                  className="inline-flex items-center gap-1 text-[11px] font-label-bold text-secondary hover:text-secondary/80 transition-colors cursor-pointer disabled:opacity-50"
+                  title="Request browser permission and use live GPS location"
+                >
+                  <span className={`material-symbols-outlined text-[13px] ${detectingLocation ? 'animate-spin' : ''}`}>
+                    {detectingLocation ? 'progress_activity' : 'my_location'}
+                  </span>
+                  <span>{detectingLocation ? 'Detecting...' : 'Use Current Loc'}</span>
+                </button>
+              </div>
+              <div className="relative flex items-center">
+                <span className="material-symbols-outlined absolute left-2 text-[17px] text-on-surface-variant pointer-events-none">
+                  location_on
+                </span>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Kudasan, Gandhinagar 382007"
+                  value={formData.location_name}
+                  onChange={e => {
+                    setFormData({ ...formData, location_name: e.target.value });
+                    setLocationStatus('');
+                    setLocationMsg('');
+                  }}
+                  className="w-full bg-surface-container-low border border-outline-variant rounded p-2 pl-7.5 sm:p-space-8 sm:pl-7.5 text-on-surface focus:ring-1 focus:ring-secondary text-xs sm:text-body-sm"
+                />
+              </div>
+              {/* Geolocation status / permission info */}
+              {locationMsg && (
+                <div className={`text-[11px] mt-1 flex items-center gap-1 ${
+                  locationStatus === 'success'
+                    ? 'text-emerald-600 dark:text-emerald-400 font-medium'
+                    : locationStatus === 'denied'
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : detectingLocation
+                    ? 'text-secondary'
+                    : 'text-on-surface-variant'
+                }`}>
+                  <span className={`material-symbols-outlined text-[13px] shrink-0 ${detectingLocation ? 'animate-spin' : ''}`}>
+                    {detectingLocation ? 'progress_activity' : locationStatus === 'success' ? 'check_circle' : locationStatus === 'denied' ? 'lock' : 'info'}
+                  </span>
+                  <span className="truncate">{locationMsg}</span>
+                </div>
+              )}
             </div>
             <div>
               <label className="text-badge font-badge text-on-surface-variant block mb-1">Condition</label>
