@@ -8,6 +8,7 @@ import rentalRoutes from "./routes/rentalRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import disputeRoutes from "./routes/disputeRoutes.js";
+import identityVerificationRoutes from "./routes/identityVerificationRoutes.js";
 import {
   errorHandler,
   errorResponseMiddleware,
@@ -48,6 +49,7 @@ app.use("/api/rentals", rentalRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/disputes", disputeRoutes);
+app.use("/api/identity-verification", identityVerificationRoutes);
 
 // Centralized error handling
 app.use(errorHandler);

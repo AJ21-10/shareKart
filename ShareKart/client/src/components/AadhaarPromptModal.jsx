@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -11,452 +11,255 @@ export const AadhaarPromptModal = ({
   onToast
 }) => {
   const { user, updateUser } = useAuth();
+  const fileInputRef = useRef(null);
 
-  const [step, setStep] = useState(1); // 1: Aadhaar Input, 2: OTP Entry, 3: Success
-  const [seg1, setSeg1] = useState('5412');
-  const [seg2, setSeg2] = useState('8901');
-  const [seg3, setSeg3] = useState('2345');
-  const [consentChecked, setConsentChecked] = useState(true);
-  const [otp, setOtp] = useState(['4', '8', '1', '9', '0', '2']);
-  const [timer, setTimer] = useState(120);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [fileName, setFileName] = useState('');
+  const [fileType, setFileType] = useState('');
+  const [fileBase64, setFileBase64] = useState('');
+  const [shareCode, setShareCode] = useState('');
+  const [documentPassword, setDocumentPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [verifiedInfo, setVerifiedInfo] = useState(null);
-
-  // Reset modal state when opened
-  useEffect(() => {
-    if (isOpen) {
-      setStep(1);
-      setErrorMessage('');
-      setLoading(false);
-      setTimer(120);
-      setSeg1('5412');
-      setSeg2('8901');
-      setSeg3('2345');
-      setOtp(['4', '8', '1', '9', '0', '2']);
-      setConsentChecked(true);
-    }
-  }, [isOpen]);
-
-  // OTP Countdown timer
-  useEffect(() => {
-    let interval;
-    if (isOpen && step === 2 && timer > 0) {
-      interval = setInterval(() => {
-        setTimer((t) => (t > 0 ? t - 1 : 0));
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isOpen, step, timer]);
 
   if (!isOpen) return null;
 
-  const formatTimer = (secs) => {
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const handleSegChange = (val, segmentSetter, nextInputId) => {
-    const cleaned = val.replace(/\D/g, '').slice(0, 4);
-    segmentSetter(cleaned);
-    if (cleaned.length === 4 && nextInputId) {
-      document.getElementById(nextInputId)?.focus();
+    const lower = file.name.toLowerCase();
+    let detected = 'unknown';
+    if (lower.endsWith('.zip')) detected = 'zip';
+    else if (lower.endsWith('.xml')) detected = 'xml';
+    else if (lower.endsWith('.pdf')) detected = 'pdf';
+
+    if (detected === 'unknown') {
+      setErrorMessage('Please select a .zip (Offline e-KYC), .xml, or .pdf (e-Aadhaar) file.');
+      return;
     }
-  };
 
-  const handleOtpChange = (index, val) => {
-    const char = val.replace(/\D/g, '').slice(-1);
-    const updated = [...otp];
-    updated[index] = char;
-    setOtp(updated);
-
-    if (char && index < 5) {
-      document.getElementById(`aadhaar-modal-otp-${index + 1}`)?.focus();
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMessage('File size cannot exceed 10MB.');
+      return;
     }
-  };
 
-  const handleSendOtp = (e) => {
-    e.preventDefault();
+    setSelectedFile(file);
+    setFileName(file.name);
+    setFileType(detected);
     setErrorMessage('');
-    if (seg1.length < 4 || seg2.length < 4 || seg3.length < 4) {
-      setErrorMessage('Please enter all 12 digits of your Aadhaar number.');
-      return;
-    }
-    if (!consentChecked) {
-      setErrorMessage('Please accept UIDAI consent authorization to continue.');
-      return;
-    }
-    setStep(2);
-    setTimer(120);
-    if (onToast) {
-      onToast('UIDAI OTP sent to registered mobile (+91 98••••••19)');
-    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFileBase64(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handlePerformVerification = async (aadhaarNumStr) => {
+  const handleVerify = async () => {
+    if (!fileBase64) {
+      setErrorMessage('Please select a supported document.');
+      return;
+    }
+
+    if (fileType === 'zip' && !shareCode.trim()) {
+      setErrorMessage('Please enter the 4-digit Share Code chosen during UIDAI download.');
+      return;
+    }
+
+    if (fileType === 'pdf' && !documentPassword.trim()) {
+      setErrorMessage('Please enter your 8-character e-Aadhaar PDF password (4 letters of name + birth year).');
+      return;
+    }
+
     setLoading(true);
     setErrorMessage('');
-    try {
-      const res = await api.verifyAadhaar(aadhaarNumStr);
-      if (res.success) {
-        const updatedUserData = res.user || {
-          is_aadhaar_verified: true,
-          aadhaar_number: `XXXX-XXXX-${aadhaarNumStr.slice(-4)}`,
-          aadhaar_hash: `#OK-${Math.floor(10000 + Math.random() * 90000)}`
-        };
-        updateUser(updatedUserData);
-        setVerifiedInfo(updatedUserData);
-        setStep(3);
-        if (onToast) {
-          onToast('Aadhaar eKYC Verified Successfully! UIDAI Green Badge granted.');
-        }
 
-        // Auto proceed after 1.8s
-        setTimeout(() => {
-          onClose();
-          if (onSuccess) onSuccess();
-        }, 1800);
+    try {
+      const res = await api.uploadIdentityVerificationDocument({
+        fileData: fileBase64,
+        fileName,
+        shareCode: shareCode.trim(),
+        documentPassword: documentPassword.trim()
+      });
+
+      if (res.success || res.status === 'verified') {
+        updateUser({
+          is_aadhaar_verified: true,
+          aadhaar_hash: res.aadhaarHash || '#OK-94182',
+          aadhaar_number: res.maskedAadhaar || 'XXXX-XXXX-4819'
+        });
+        if (onToast) {
+          onToast('Aadhaar e-KYC Verified Successfully! UIDAI Green Badge granted.');
+        }
+        if (onSuccess) onSuccess();
+        onClose();
       } else {
-        setErrorMessage(res.message || 'Aadhaar verification failed. Please try again.');
+        setErrorMessage(res.message || 'Verification could not be completed.');
       }
     } catch (err) {
-      console.warn('Direct verify fallback:', err);
-      // Fallback verification for demo resilience
-      const fallbackUser = {
-        is_aadhaar_verified: true,
-        aadhaar_number: `XXXX-XXXX-${aadhaarNumStr.slice(-4) || '2345'}`,
-        aadhaar_hash: `#OK-${Math.floor(10000 + Math.random() * 90000)}`
-      };
-      updateUser(fallbackUser);
-      setVerifiedInfo(fallbackUser);
-      setStep(3);
-      if (onToast) {
-        onToast('Aadhaar eKYC Verified Successfully! UIDAI Green Badge granted.');
-      }
-      setTimeout(() => {
-        onClose();
-        if (onSuccess) onSuccess();
-      }, 1800);
+      console.error('[AadhaarPromptModal] Verification error:', err);
+      setErrorMessage(err.message || 'Verification failed. Please check the document and passcode.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyOtp = (e) => {
-    e.preventDefault();
-    const enteredOtp = otp.join('');
-    if (enteredOtp.length < 6) {
-      setErrorMessage('Please enter the complete 6-digit OTP received from UIDAI.');
-      return;
-    }
-    const fullAadhaar = `${seg1}${seg2}${seg3}`;
-    handlePerformVerification(fullAadhaar);
-  };
+  const reasonTitle = 
+    reason === 'list' 
+      ? 'Aadhaar Verification Required to List Items' 
+      : (reason === 'buy' || reason === 'rent' 
+          ? 'Identity Verification Required for High-Value Rentals' 
+          : 'Aadhaar-Based Identity Verification');
 
-  const handleInstantDemoVerify = () => {
-    const fullAadhaar = `${seg1 || '5412'}${seg2 || '8901'}${seg3 || '2345'}`;
-    handlePerformVerification(fullAadhaar);
-  };
-
-  // Dynamic texts based on context reason
-  const headerContent = {
-    list: {
-      badge: 'Listing Permission Required',
-      badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-      title: 'Aadhaar Verification Required to List',
-      desc: 'To protect our neighborhood from stolen or fraudulent items, all hosts must verify their identity via UIDAI Aadhaar eKYC before listing gear for rent or sale.'
-    },
-    buy: {
-      badge: 'Escrow & Booking Protection',
-      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-      title: 'Aadhaar Verification Required to Rent & Buy',
-      desc: 'To ensure community safety and unlock Razorpay trustee escrow protection, equipment renters and buyers must verify their Aadhaar identity.'
-    },
-    general: {
-      badge: 'UIDAI Direct eKYC',
-      badgeColor: 'bg-primary/20 text-secondary-fixed border-primary/30',
-      title: 'UIDAI Aadhaar eKYC Verification',
-      desc: 'Verify your Aadhaar to earn the official Green Verified badge, build 100% trust, and unlock listing and renting permissions on ShareKart.'
-    }
-  }[reason] || {
-    badge: 'Identity Verification',
-    badgeColor: 'bg-primary/20 text-secondary-fixed border-primary/30',
-    title: 'Aadhaar Verification Required',
-    desc: 'Verify your Aadhaar to continue with peer-to-peer equipment sharing.'
-  };
+  const reasonDesc =
+    reason === 'list'
+      ? 'To ensure community safety and prevent fraud, ShareKart requires all sellers and lenders to verify their identity before publishing listings.'
+      : 'To protect high-value peer-to-peer equipment and prevent unauthorized bookings, identity verification is required before completing checkout.';
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-fadeIn">
-      <div
-        className="w-full max-w-lg bg-surface-container-lowest rounded-3xl shadow-2xl border border-outline-variant overflow-hidden flex flex-col text-on-surface transform transition-all duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Top Header Banner */}
-        <div className="relative p-6 bg-gradient-to-br from-primary via-primary-container to-[#0b1c30] text-on-primary">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-lg bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/60 overflow-hidden flex flex-col">
+        {/* Modal Header */}
+        <div className="px-6 py-4 bg-surface-container-low border-b border-outline-variant/60 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-secondary text-[24px]">verified_user</span>
+            <span className="font-label-bold text-label-bold text-primary">UIDAI Identity Verification</span>
+          </div>
           <button
             onClick={onClose}
-            type="button"
-            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
-            aria-label="Close"
+            className="text-on-surface-variant hover:text-on-surface transition-colors rounded-full p-1 hover:bg-surface-container"
           >
-            <span className="material-symbols-outlined text-[18px]">close</span>
+            <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
-
-          <div className="flex items-center gap-2 mb-2">
-            <span
-              className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${headerContent.badgeColor}`}
-            >
-              <span className="material-symbols-outlined text-[13px]">shield_person</span>
-              {headerContent.badge}
-            </span>
-            <span className="text-[11px] text-white/70 font-mono">UIDAI API Gateway</span>
-          </div>
-
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-            {headerContent.title}
-          </h2>
-          <p className="text-xs sm:text-sm text-white/80 mt-1.5 leading-relaxed">
-            {headerContent.desc}
-          </p>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 flex flex-col gap-5">
+        <div className="p-6 flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
+          <div>
+            <h3 className="font-title-lg text-lg text-on-surface font-bold">
+              {reasonTitle}
+            </h3>
+            <p className="text-body-sm text-on-surface-variant mt-1 leading-relaxed">
+              {reasonDesc}
+            </p>
+          </div>
+
+          {/* Quick Guidance Strip */}
+          <div className="p-3 rounded-lg bg-surface-container text-xs text-on-surface-variant flex flex-col gap-1 border border-outline-variant/60">
+            <div className="flex items-center justify-between font-semibold text-primary">
+              <span>Need your document?</span>
+              <a
+                href="https://myaadhaarbeta.uidai.gov.in/genericDownloadAadhaar/en"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 underline text-secondary hover:text-secondary/80"
+              >
+                Download from UIDAI ↗
+              </a>
+            </div>
+            <span>Download either <strong>Paperless Offline e-KYC (.zip)</strong> or <strong>e-Aadhaar (.pdf)</strong>.</span>
+          </div>
+
+          {/* File Picker */}
+          <div className="flex flex-col gap-2">
+            <label className="font-label-bold text-xs text-on-surface">
+              Upload Aadhaar Document (.zip / .xml / .pdf)
+            </label>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".zip,.xml,.pdf"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="cursor-pointer p-4 rounded-xl border border-dashed border-outline-variant hover:border-primary/80 transition-colors flex items-center justify-between bg-surface-container-low/50"
+            >
+              <div className="flex items-center gap-3 truncate">
+                <span className="material-symbols-outlined text-primary text-[24px]">upload_file</span>
+                <span className="text-body-sm truncate text-on-surface font-medium">
+                  {selectedFile ? fileName : 'Click to select document from your device'}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-label-bold shrink-0"
+              >
+                Browse
+              </button>
+            </div>
+          </div>
+
+          {/* Share Code / Password */}
+          {fileType === 'zip' && (
+            <div className="flex flex-col gap-1">
+              <label className="font-label-bold text-xs text-on-surface">
+                4-Digit Share Code
+              </label>
+              <input
+                type="text"
+                maxLength={8}
+                placeholder="e.g. 1234"
+                value={shareCode}
+                onChange={(e) => setShareCode(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface font-mono text-sm focus:border-primary focus:outline-none"
+              />
+              <span className="text-[11px] text-on-surface-variant">The 4-digit code chosen during UIDAI download.</span>
+            </div>
+          )}
+
+          {fileType === 'pdf' && (
+            <div className="flex flex-col gap-1">
+              <label className="font-label-bold text-xs text-on-surface">
+                e-Aadhaar PDF Password
+              </label>
+              <input
+                type="password"
+                placeholder="e.g. AARA1998"
+                value={documentPassword}
+                onChange={(e) => setDocumentPassword(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface font-mono text-sm focus:border-primary focus:outline-none"
+              />
+              <span className="text-[11px] text-on-surface-variant">First 4 letters of your name (CAPITAL) + year of birth (YYYY).</span>
+            </div>
+          )}
+
           {errorMessage && (
-            <div className="p-3 rounded-xl bg-error-container/40 border border-error/30 text-error flex items-start gap-2 text-xs">
-              <span className="material-symbols-outlined text-[16px] shrink-0 mt-0.5">error</span>
+            <div className="p-2.5 rounded-lg bg-error-container/40 border border-error/30 text-error text-xs flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px]">error</span>
               <span>{errorMessage}</span>
             </div>
           )}
 
-          {/* STEP 1: Aadhaar Form */}
-          {step === 1 && (
-            <form onSubmit={handleSendOtp} className="flex flex-col gap-5">
-              <div>
-                <label className="block text-xs font-bold text-on-surface mb-2 flex items-center justify-between">
-                  <span>Enter 12-Digit Aadhaar Number</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSeg1('5412');
-                      setSeg2('8901');
-                      setSeg3('2345');
-                    }}
-                    className="text-[11px] text-secondary font-bold hover:underline cursor-pointer flex items-center gap-1"
-                  >
-                    <span className="material-symbols-outlined text-[13px]">bolt</span>
-                    Use Demo Aadhaar
-                  </button>
-                </label>
+          {/* Action buttons */}
+          <div className="flex items-center justify-between pt-2 border-t border-outline-variant/60">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                if (onNavigate) onNavigate('aadhaar-ekyc');
+              }}
+              className="text-xs text-primary font-label-bold hover:underline"
+            >
+              Open Full e-KYC Portal →
+            </button>
 
-                {/* 3 segmented boxes */}
-                <div className="grid grid-cols-3 gap-2.5">
-                  <input
-                    id="aadhaar-seg-1"
-                    type="text"
-                    maxLength={4}
-                    value={seg1}
-                    onChange={(e) => handleSegChange(e.target.value, setSeg1, 'aadhaar-seg-2')}
-                    placeholder="5412"
-                    className="text-center font-mono text-lg font-bold tracking-widest py-2.5 bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-secondary focus:border-transparent outline-none"
-                    autoFocus
-                  />
-                  <input
-                    id="aadhaar-seg-2"
-                    type="text"
-                    maxLength={4}
-                    value={seg2}
-                    onChange={(e) => handleSegChange(e.target.value, setSeg2, 'aadhaar-seg-3')}
-                    placeholder="8901"
-                    className="text-center font-mono text-lg font-bold tracking-widest py-2.5 bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-secondary focus:border-transparent outline-none"
-                  />
-                  <input
-                    id="aadhaar-seg-3"
-                    type="text"
-                    maxLength={4}
-                    value={seg3}
-                    onChange={(e) => handleSegChange(e.target.value, setSeg3, null)}
-                    placeholder="2345"
-                    className="text-center font-mono text-lg font-bold tracking-widest py-2.5 bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-secondary focus:border-transparent outline-none"
-                  />
-                </div>
-                <p className="text-[11px] text-on-surface-variant mt-1.5 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[13px] text-secondary">lock</span>
-                  Direct UIDAI 256-bit SHA-256 encrypted verification. We never store raw Aadhaar.
-                </p>
-              </div>
-
-              {/* Consent Box */}
-              <label className="flex items-start gap-2.5 p-3 rounded-xl bg-surface-container-low border border-outline-variant/60 cursor-pointer hover:bg-surface-container transition-colors">
-                <input
-                  type="checkbox"
-                  checked={consentChecked}
-                  onChange={(e) => setConsentChecked(e.target.checked)}
-                  className="mt-0.5 rounded text-secondary focus:ring-secondary w-4 h-4"
-                />
-                <span className="text-[11px] text-on-surface-variant leading-relaxed">
-                  I consent to verify my identity via UIDAI direct eKYC service. I understand this grants an official verified badge on ShareKart under Aadhaar Act 2016 regulations.
-                </span>
-              </label>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col gap-2 pt-1">
-                <button
-                  type="submit"
-                  className="w-full bg-secondary hover:bg-secondary/90 text-on-secondary font-bold py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer text-sm"
-                >
-                  <span className="material-symbols-outlined text-[18px]">sms</span>
-                  <span>Get UIDAI OTP</span>
-                </button>
-
-                <div className="flex items-center gap-2 my-1">
-                  <div className="flex-1 h-px bg-outline-variant/60"></div>
-                  <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Or Instant Sandbox</span>
-                  <div className="flex-1 h-px bg-outline-variant/60"></div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleInstantDemoVerify}
-                  disabled={loading}
-                  className="w-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-bold py-2.5 rounded-xl border border-outline-variant/80 transition-all flex items-center justify-center gap-2 cursor-pointer text-xs"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                      <span>Verifying with UIDAI Sandbox...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-[16px] text-secondary">verified_user</span>
-                      <span>1-Click Instant Verify (Test Demo)</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* STEP 2: OTP Entry */}
-          {step === 2 && (
-            <form onSubmit={handleVerifyOtp} className="flex flex-col gap-5">
-              <div className="text-center">
-                <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-secondary-container text-on-secondary-container mb-2">
-                  <span className="material-symbols-outlined text-[24px]">phonelink_lock</span>
-                </span>
-                <h3 className="font-bold text-base text-on-surface">Enter 6-Digit UIDAI OTP</h3>
-                <p className="text-xs text-on-surface-variant mt-0.5">
-                  Sent to mobile linked with Aadhaar ending in <strong className="text-on-surface">{seg3}</strong>
-                </p>
-              </div>
-
-              {/* 6 Digit Inputs */}
-              <div>
-                <div className="flex justify-center gap-2 sm:gap-2.5">
-                  {otp.map((digit, idx) => (
-                    <input
-                      key={idx}
-                      id={`aadhaar-modal-otp-${idx}`}
-                      type="text"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => handleOtpChange(idx, e.target.value)}
-                      className="w-10 sm:w-12 h-12 text-center font-mono text-xl font-bold bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-secondary focus:border-transparent outline-none"
-                    />
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between mt-3 text-xs text-on-surface-variant">
-                  <span className="flex items-center gap-1 font-mono">
-                    <span className="material-symbols-outlined text-[14px]">timer</span>
-                    {formatTimer(timer)} remaining
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOtp(['4', '8', '1', '9', '0', '2']);
-                      setTimer(120);
-                      if (onToast) onToast('Test OTP 481902 re-populated!');
-                    }}
-                    className="text-secondary font-bold hover:underline cursor-pointer"
-                  >
-                    Fill Test OTP (481902)
-                  </button>
-                </div>
-              </div>
-
-              {/* Buttons */}
-              <div className="flex flex-col gap-2 pt-2">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-secondary hover:bg-secondary/90 text-on-secondary font-bold py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer text-sm"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Verifying with UIDAI Servers...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-[18px]">verified</span>
-                      <span>Verify & Continue</span>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="text-xs text-on-surface-variant hover:text-on-surface py-1 font-semibold text-center"
-                >
-                  ← Edit Aadhaar Number
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* STEP 3: Verification Success */}
-          {step === 3 && (
-            <div className="py-6 flex flex-col items-center text-center gap-3 animate-fadeIn">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 flex items-center justify-center animate-bounce">
-                <span className="material-symbols-outlined text-[36px]">check_circle</span>
-              </div>
-
-              <h3 className="text-xl font-bold text-on-surface">Aadhaar Verified Successfully!</h3>
-              <p className="text-xs text-on-surface-variant max-w-sm">
-                Your identity has been confirmed via UIDAI direct eKYC. Official Green Shield Badge is now active on your ShareKart profile.
-              </p>
-
-              <div className="bg-surface-container-low p-3 rounded-xl border border-outline-variant/60 w-full max-w-xs font-mono text-xs text-left mt-2 flex flex-col gap-1">
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant">Aadhaar:</span>
-                  <span className="font-bold text-on-surface">{verifiedInfo?.aadhaar_number || `XXXX-XXXX-${seg3}`}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant">UIDAI Hash:</span>
-                  <span className="font-bold text-secondary">{verifiedInfo?.aadhaar_hash || '#OK-94182'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant">Status:</span>
-                  <span className="font-bold text-emerald-600">Green Verified Member</span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  if (onSuccess) onSuccess();
-                }}
-                className="mt-4 w-full max-w-xs bg-secondary text-on-secondary font-bold py-2.5 rounded-xl shadow-md hover:bg-secondary/90 transition-all flex items-center justify-center gap-2 cursor-pointer text-xs"
-              >
-                <span>Continue to {reason === 'list' ? 'Listing Gear' : reason === 'buy' ? 'Rental Checkout' : 'ShareKart'}</span>
-                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-              </button>
-            </div>
-          )}
+            <button
+              type="button"
+              onClick={handleVerify}
+              disabled={!selectedFile || loading}
+              className={`px-5 py-2.5 rounded-lg font-label-bold text-body-sm flex items-center gap-2 transition-all ${
+                selectedFile && !loading
+                  ? 'bg-primary text-on-primary hover:bg-primary/95 shadow'
+                  : 'bg-surface-container-highest text-on-surface-variant opacity-60 cursor-not-allowed'
+              }`}
+            >
+              {loading && <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>}
+              <span>{loading ? 'Validating...' : 'Verify Identity'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

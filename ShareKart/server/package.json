@@ -8,14 +8,19 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "seed": "node src/seeds/seedData.js",
-    "seed:pg": "node src/seeds/seedData.js"
+    "seed:pg": "node src/seeds/seedData.js",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
+    "@xmldom/xmldom": "^0.9.12",
+    "adm-zip": "^0.6.1",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "fast-xml-parser": "^5.11.2",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "xml-crypto": "^6.3.3"
   }
 }

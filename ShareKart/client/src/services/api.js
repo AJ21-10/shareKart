@@ -211,11 +211,43 @@ export const api = {
     return handleResponse(res);
   },
 
-  async verifyAadhaar(aadhaarNumber) {
-    const res = await fetch(`${API_BASE}/auth/verify-aadhaar`, {
+  // Identity Verification (Aadhaar e-KYC & Cryptographic Document Validation)
+  async getIdentityVerificationStatus() {
+    const res = await fetch(`${API_BASE}/identity-verification/status`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(res);
+  },
+
+  async createIdentityVerificationSession() {
+    const res = await fetch(`${API_BASE}/identity-verification/sessions`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(res);
+  },
+
+  async uploadIdentityVerificationDocument(data) {
+    const res = await fetch(`${API_BASE}/identity-verification/document`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ aadhaarNumber })
+      body: JSON.stringify(data)
+    });
+    return handleResponse(res);
+  },
+
+  async completeIdentityVerificationSession(sessionId) {
+    const res = await fetch(`${API_BASE}/identity-verification/sessions/${sessionId}/complete`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(res);
+  },
+
+  async cancelIdentityVerificationSession(sessionId) {
+    const res = await fetch(`${API_BASE}/identity-verification/sessions/${sessionId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
     });
     return handleResponse(res);
   },
