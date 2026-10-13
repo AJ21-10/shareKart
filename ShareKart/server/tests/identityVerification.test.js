@@ -61,7 +61,15 @@ describe('Aadhaar Identity Verification Engine', () => {
 
     // 2. Fetch test users from db
     testUser = await db.get('SELECT id, name, email, is_aadhaar_verified FROM users WHERE id = 1');
-    unverifiedUser = await db.get('SELECT id, name, email, is_aadhaar_verified FROM users WHERE id = 6');
+    unverifiedUser = await db.get('SELECT id, name, email, is_aadhaar_verified FROM users WHERE is_aadhaar_verified = false LIMIT 1');
+    if (!unverifiedUser) {
+      const insertRes = await db.run(`
+        INSERT INTO users (name, email, password_hash, phone, location, city, pincode, is_aadhaar_verified)
+        VALUES ('Unverified Test User', 'unverified_test@sharekart.in', 'test_hash', '+91 99999 88888', 'Test City', 'Test City', '123456', false)
+        RETURNING id, name, email, is_aadhaar_verified
+      `);
+      unverifiedUser = insertRes.rows[0];
+    }
 
     // Create a fresh test verification session
     const sessionRes = await db.run(`
@@ -79,6 +87,12 @@ describe('Aadhaar Identity Verification Engine', () => {
     if (testSessionId) {
       await db.run('DELETE FROM identity_verifications WHERE id = ?', [testSessionId]);
     }
+    // Clean up temporary unverified user if created
+    if (unverifiedUser?.email === 'unverified_test@sharekart.in') {
+      await db.run('DELETE FROM users WHERE id = ?', [unverifiedUser.id]);
+    }
+    // Close pool connections
+    await db.pool.end();
   });
 
   // ---------------------------------------------------------------------------

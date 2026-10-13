@@ -18,5 +18,8 @@
     "ecommerce"
   ],
   "author": "Sharekart Team",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "supabase": "^2.120.0"
+  }
 }
