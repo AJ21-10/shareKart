@@ -354,10 +354,6 @@ const deletePeSession = (phone) => {
   } catch (err) {}
 };
 
-// [COMMENTED OUT] Backup / Fallback OTP variables as requested
-// const HARDCODED_OTP = '123456';
-// const registrationOtps = new Map();
-
 export const sendRegistrationOtp = async (req, res, next) => {
   try {
     const { phone } = req.body;
@@ -390,7 +386,12 @@ export const sendRegistrationOtp = async (req, res, next) => {
 
       const peRes = await fetch('https://auth.phone.email/submit-login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Origin': 'https://auth.phone.email',
+          'Referer': `https://auth.phone.email/log-in?client_id=${clientId}`
+        },
         body: peBody.toString()
       });
 
@@ -402,18 +403,34 @@ export const sendRegistrationOtp = async (req, res, next) => {
         const cleanCookie = rawCookie.split(';')[0].trim();
         savePeSession(cleanPhone, {
           cookie: cleanCookie,
+          flag_allow_auth_name: peData.flag_allow_auth_name || '1',
           timestamp: Date.now()
         });
         console.log(`\n========================================`);
         console.log(`[Phone.Email SMS SENT] 📲 Real SMS dispatched to: +91 ${cleanPhone}`);
         console.log(`[Phone.Email SMS SENT] ⏱️ Check your mobile handset inbox!`);
         console.log(`========================================\n`);
+      } else if (peData.flag === 7) {
+        // OTP was recently sent and is still valid on Phone.Email
+        const existingSession = getPeSessions().get(cleanPhone);
+        if (existingSession && existingSession.cookie) {
+          peSuccess = true;
+          peStatusMessage = 'OTP was recently sent to your phone. Valid for 3 mins.';
+          console.log(`[Phone.Email] Active OTP session exists for: +91 ${cleanPhone}`);
+        } else if (rawCookie) {
+          savePeSession(cleanPhone, {
+            cookie: rawCookie.split(';')[0].trim(),
+            flag_allow_auth_name: '1',
+            timestamp: Date.now()
+          });
+          peSuccess = true;
+          peStatusMessage = 'OTP was recently sent to your phone. Valid for 3 mins.';
+        } else {
+          peStatusMessage = 'OTP was recently sent to your phone. Please wait 3 mins before requesting a new one.';
+        }
       } else if (peData.flag === 4) {
         peStatusMessage = 'Phone.Email limit reached: Maximum permitted login attempts exceeded. Please wait for cooldown or try later.';
         console.warn(`\n[Phone.Email RATE-LIMIT] ⚠️ Flag 4: Maximum permitted login attempts reached on Phone.Email gateway.\n`);
-      } else if (peData.flag === 7) {
-        peStatusMessage = 'OTP was recently sent to your phone. Valid for 3 mins.';
-        console.log(`[Phone.Email] Rate-limit cooldown (3 mins) for: +91 ${cleanPhone}`);
       } else {
         peStatusMessage = `Phone.Email gateway returned status: ${JSON.stringify(peData)}`;
         console.log(`[Phone.Email] Gateway status: ${JSON.stringify(peData)}`);
@@ -422,14 +439,6 @@ export const sendRegistrationOtp = async (req, res, next) => {
       console.warn(`[Phone.Email] Gateway connection note: ${peErr.message}`);
       peStatusMessage = `Network error connecting to Phone.Email: ${peErr.message}`;
     }
-
-    /*
-    // [COMMENTED OUT] Backup / Fallback dynamic code generation as requested
-    const dynamicOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresInSeconds = 300;
-    const expiresAt = Date.now() + expiresInSeconds * 1000;
-    registrationOtps.set(cleanPhone, { otp: dynamicOtp, expiresAt });
-    */
 
     if (!peSuccess) {
       return res.status(400).json({
@@ -461,9 +470,10 @@ export const verifyRegistrationOtp = async (req, res, next) => {
     const inputOtp = otp.toString().trim();
     const clientId = process.env.CLIENT_ID || process.env.PHONE_EMAIL_CLIENT_ID || '11753610740663059476';
 
-    // 1. Verify against Phone.Email network session
+    // 1. Verify against Phone.Email network session (Real SMS)
     const peSessions = getPeSessions();
     const peSession = peSessions.get(cleanPhone);
+
     if (!peSession || !peSession.cookie) {
       console.warn(`[Phone.Email] No active session found for +91 ${cleanPhone}`);
       return res.status(400).json({
@@ -476,7 +486,18 @@ export const verifyRegistrationOtp = async (req, res, next) => {
       const firstName = (name && name.trim().split(' ')[0]) || 'User';
       const lastName = (name && name.trim().split(' ').slice(1).join(' ')) || 'Customer';
 
-      const peVerifyBody = new URLSearchParams({
+      console.log(`[Phone.Email Verify Request] Phone: +91 ${cleanPhone}, OTP: ${inputOtp}`);
+
+      const commonHeaders = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Cookie': peSession.cookie,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Origin': 'https://auth.phone.email',
+        'Referer': `https://auth.phone.email/log-in?client_id=${clientId}`
+      };
+
+      // Try official verify-login endpoint
+      const verifyLoginBody = new URLSearchParams({
         otp: inputOtp,
         client_id: clientId,
         device: '',
@@ -484,25 +505,45 @@ export const verifyRegistrationOtp = async (req, res, next) => {
         redirect_url: '',
         fname: firstName,
         lname: lastName,
-        ue: '',
-        flag_allow_auth_name: '0'
+        ue: '0',
+        flag_allow_auth_name: peSession.flag_allow_auth_name || '1'
       });
 
-      console.log(`[Phone.Email Verify Request] Phone: +91 ${cleanPhone}, OTP: ${inputOtp}`);
-
-      const peVerifyRes = await fetch('https://auth.phone.email/verify-login', {
+      let peVerifyRes = await fetch('https://auth.phone.email/verify-login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Cookie': peSession.cookie
-        },
-        body: peVerifyBody.toString()
+        headers: commonHeaders,
+        body: verifyLoginBody.toString()
       });
 
-      const peVerifyData = await peVerifyRes.json().catch(() => ({}));
-      console.log(`[Phone.Email Verify Response] Status: ${peVerifyRes.status}, Body:`, peVerifyData);
+      let peVerifyData = await peVerifyRes.json().catch(() => ({}));
+      console.log(`[Phone.Email verify-login Response] Status: ${peVerifyRes.status}, Body:`, peVerifyData);
 
-      if (peVerifyData.flag === 1) {
+      // Fallback to verify-auth-login if not recognized
+      if (peVerifyData.flag !== 1 && !peVerifyData.jwt && !peVerifyData.access_token) {
+        const verifyAuthBody = new URLSearchParams({
+          otp: inputOtp,
+          from_country_code: '+91',
+          from_phone_no: cleanPhone,
+          device: '',
+          business_name: '',
+          redirect_url: ''
+        });
+
+        const authRes = await fetch('https://auth.phone.email/verify-auth-login', {
+          method: 'POST',
+          headers: commonHeaders,
+          body: verifyAuthBody.toString()
+        });
+
+        const authData = await authRes.json().catch(() => ({}));
+        console.log(`[Phone.Email verify-auth-login Response] Status: ${authRes.status}, Body:`, authData);
+
+        if (authData.flag === 1 || authData.jwt || authData.access_token) {
+          peVerifyData = authData;
+        }
+      }
+
+      if (peVerifyData.flag === 1 || peVerifyData.jwt || peVerifyData.access_token) {
         deletePeSession(cleanPhone);
         console.log(`[Phone.Email] ✅ Real SMS OTP verified successfully via Phone.Email for +91 ${cleanPhone}`);
         return res.json({
@@ -510,10 +551,14 @@ export const verifyRegistrationOtp = async (req, res, next) => {
           message: 'Mobile number verified successfully via Phone.Email!'
         });
       } else {
-        console.log(`[Phone.Email] ❌ Verification failed with flag ${peVerifyData.flag}`);
+        console.log(`[Phone.Email] ❌ Verification failed with response:`, peVerifyData);
+        let errorMsg = 'Invalid OTP code. Please enter the exact 6-digit code received on your mobile SMS.';
+        if (peVerifyData.flag === 3) errorMsg = 'Invalid First Name.';
+        if (peVerifyData.flag === 4) errorMsg = 'Last Name is required.';
+        if (peVerifyData.flag === 5) errorMsg = 'Invalid Last Name.';
         return res.status(400).json({
           success: false,
-          message: 'Invalid OTP code. Please enter the exact 6-digit code received on your mobile SMS.'
+          message: errorMsg
         });
       }
     } catch (peVerifyErr) {
@@ -523,22 +568,6 @@ export const verifyRegistrationOtp = async (req, res, next) => {
         message: 'Network error communicating with Phone.Email. Please try again.'
       });
     }
-
-    /*
-    // [COMMENTED OUT] Fallback in-memory verification as requested
-    const stored = registrationOtps.get(cleanPhone);
-    const isDynamicMatch = stored && stored.otp === inputOtp && Date.now() <= stored.expiresAt;
-    const isFallbackMatch = inputOtp === HARDCODED_OTP || inputOtp === '481902';
-
-    if (isDynamicMatch || isFallbackMatch) {
-      registrationOtps.delete(cleanPhone);
-      deletePeSession(cleanPhone);
-      console.log(`[OTP SERVICE] ✅ Verified successfully for +91 ${cleanPhone}`);
-      return res.json({
-        success: true,
-        message: 'Mobile number verified successfully!'
-      });
-    */
   } catch (error) {
     next(error);
   }

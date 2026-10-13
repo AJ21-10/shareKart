@@ -109,9 +109,6 @@ export const AuthModal = ({ isOpen, onClose, onToast, onOpenFullPage }) => {
     return () => window.removeEventListener("message", handlePhoneEmailMessage);
   }, [formData.phone, onToast]);
 
-  // [COMMENTED OUT] Backup / Fallback OTP as requested
-  // const HARDCODED_OTP = "123456";
-
   const handleSendPhoneOtp = async () => {
     setOtpError("");
     const cleanPhone = formData.phone.replace(/\D/g, "").slice(-10);
@@ -172,17 +169,6 @@ export const AuthModal = ({ isOpen, onClose, onToast, onOpenFullPage }) => {
 
     setVerifyingOtp(true);
     try {
-      /*
-      // [COMMENTED OUT] Backup / Fallback hardcoded OTP checks
-      if (code === HARDCODED_OTP || code === "481902") {
-        setIsPhoneVerified(true);
-        setVerifiedPhone(cleanPhone);
-        setOtpError("");
-        onToast && onToast("✅ Mobile number verified successfully!");
-        return;
-      }
-      */
-
       const res = await api.verifyRegistrationOtp(cleanPhone, code, formData.name);
       if (res && res.success) {
         setIsPhoneVerified(true);
