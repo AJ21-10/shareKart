@@ -11,17 +11,25 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function runPostgresMigration() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString && !process.env.PGHOST) {
+  const rawConnectionString = process.env.DATABASE_URL;
+  if (!rawConnectionString && !process.env.PGHOST) {
     console.error('❌ Error: No DATABASE_URL or PGHOST provided in .env');
     process.exit(1);
   }
+
+  const useSsl =
+    process.env.PGSSL === 'true' ||
+    rawConnectionString?.includes('sslmode=require') ||
+    rawConnectionString?.includes('supabase.co') ||
+    rawConnectionString?.includes('supabase.com');
+
+  const connectionString = rawConnectionString?.replace(/[?&]sslmode=[^&]+/g, '').replace(/\?$/, '');
 
   const pool = new Pool(
     connectionString
       ? {
           connectionString,
-          ssl: process.env.PGSSL === 'true' || connectionString?.includes('sslmode=require') ? { rejectUnauthorized: false } : undefined,
+          ssl: useSsl ? { rejectUnauthorized: false } : undefined,
         }
       : {
           user: process.env.PGUSER || 'postgres',
@@ -29,6 +37,7 @@ async function runPostgresMigration() {
           database: process.env.PGDATABASE || 'sharekart_db',
           password: process.env.PGPASSWORD || 'postgres',
           port: Number(process.env.PGPORT) || 5432,
+          ssl: useSsl ? { rejectUnauthorized: false } : undefined,
         }
   );
 

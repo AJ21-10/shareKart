@@ -6,8 +6,15 @@ dotenv.config();
 const { Pool } = pg;
 
 // PostgreSQL connection configuration
-const connectionString = process.env.DATABASE_URL;
-const useSsl = process.env.PGSSL === 'true' || connectionString?.includes('sslmode=require');
+const rawConnectionString = process.env.DATABASE_URL;
+const useSsl =
+  process.env.PGSSL === 'true' ||
+  rawConnectionString?.includes('sslmode=require') ||
+  rawConnectionString?.includes('supabase.co') ||
+  rawConnectionString?.includes('supabase.com');
+
+// Strip ?sslmode=... from connection string so pg does not override rejectUnauthorized: false
+const connectionString = rawConnectionString?.replace(/[?&]sslmode=[^&]+/g, '').replace(/\?$/, '');
 
 const poolConfig = connectionString
   ? {
