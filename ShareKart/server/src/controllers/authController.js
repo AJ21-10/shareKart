@@ -177,29 +177,12 @@ export const otpLogin = async (req, res, next) => {
 
 export const verifyAadhaar = async (req, res, next) => {
   try {
-    const userId = req.user?.id || 1;
-    const { aadhaarNumber } = req.body;
-
-    const last4 = aadhaarNumber ? aadhaarNumber.replace(/\D/g, '').slice(-4) : '4819';
-    const aadhaar_number = `XXXX-XXXX-${last4 || '4819'}`;
-    const aadhaar_hash = `#OK-${Math.floor(10000 + Math.random() * 90000)}`;
-
-    await db.run(`
-      UPDATE users
-      SET is_aadhaar_verified = true, aadhaar_number = ?, aadhaar_hash = ?
-      WHERE id = ?
-    `, [aadhaar_number, aadhaar_hash, userId]);
-
-    const user = await db.get(
-      'SELECT id, name, email, phone, location, city, pincode, avatar_url, is_aadhaar_verified, aadhaar_hash, aadhaar_number, member_since, rating, reviews_count FROM users WHERE id = ?',
-      [userId]
+    return res.sendError(
+      403,
+      'Direct status mutation is not permitted. Please submit your official Aadhaar e-KYC document through the secure Identity Verification portal.',
+      null,
+      'DOCUMENT_VERIFICATION_REQUIRED'
     );
-
-    res.json({
-      success: true,
-      message: 'Aadhaar eKYC verified successfully with UIDAI direct API. Green Badge granted!',
-      user
-    });
   } catch (error) {
     next(error);
   }
