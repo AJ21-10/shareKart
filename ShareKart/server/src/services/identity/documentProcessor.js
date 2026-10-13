@@ -148,7 +148,7 @@ export async function processVerificationDocument({
       referenceId = extractedIdentity.referenceId;
     } else if (docType === 'pdf') {
       verificationMethod = 'eaadhaar_pdf';
-      const pdfResult = await verifyAadhaarPdf(fileBuffer, documentPassword);
+      const pdfResult = await verifyAadhaarPdf(fileBuffer, documentPassword, user.name);
       extractedIdentity = pdfResult.identity;
       requiresManualReview = pdfResult.requiresManualReview;
       statusReason = pdfResult.message;

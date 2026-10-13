@@ -37,6 +37,7 @@ import { processVerificationDocument } from '../src/services/identity/documentPr
 import { extractAadhaarXmlFromZip, inspectZipEntries, ZipSecurityError } from '../src/services/identity/zipValidator.js';
 import { verifyAadhaarXml, sanitizeXmlInput, XmlSecurityError } from '../src/services/identity/xmlDsigValidator.js';
 import { compareNames } from '../src/services/identity/nameMatcher.js';
+import { extractResidentName } from '../src/services/identity/pdfValidator.js';
 import { generateToken } from '../src/middleware/auth.js';
 import {
   generateTestCertAndKey,
@@ -503,5 +504,33 @@ describe('Aadhaar Identity Verification Engine', () => {
 
     assert.equal(productError.status, 403);
     assert.equal(productError.code, 'AADHAAR_REQUIRED');
+  });
+
+  // ---------------------------------------------------------------------------
+  // 21. Robust e-Aadhaar PDF text extraction
+  // ---------------------------------------------------------------------------
+  test('21. Correctly extracts resident name from e-Aadhaar text without mistaking Enrolment No', () => {
+    const sampleText = `
+Enrolment No. : 1234/12345/12345
+To
+पुष्पेंद्र
+Pushpender
+S/O: Suresh
+Address: Sector 7, Gandhinagar
+Gujarat - 382010
+
+GOVERNMENT OF INDIA
+Pushpender
+DOB: 12/03/2003
+Male
+XXXX XXXX 8408
+    `;
+
+    const extractedWithName = extractResidentName(sampleText, 'pushpender');
+    assert.equal(extractedWithName, 'Pushpender');
+
+    const extractedWithoutName = extractResidentName(sampleText);
+    assert.equal(extractedWithoutName, 'Pushpender');
+    assert.notEqual(extractedWithoutName, 'Enrolment No');
   });
 });
