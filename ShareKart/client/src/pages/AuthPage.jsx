@@ -131,7 +131,9 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
             setOtpSent(false);
             setOtpError("");
             onToast &&
-              onToast("✅ Mobile number verified successfully via Phone.Email!");
+              onToast(
+                "✅ Mobile number verified successfully via Phone.Email!",
+              );
           }
         } catch (err) {
           console.error("Phone.Email postMessage failed", err);
@@ -186,7 +188,9 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
       onToast && onToast(toastMsg);
     } catch (err) {
       console.error("OTP send error:", err);
-      setOtpError("Failed to send SMS OTP. Please check your network and retry.");
+      setOtpError(
+        "Failed to send SMS OTP. Please check your network and retry.",
+      );
       onToast && onToast(`❌ Failed to send SMS OTP.`);
     } finally {
       setOtpSending(false);
@@ -225,12 +229,15 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
         setIsPhoneVerified(true);
         setVerifiedPhone(cleanPhone);
         setOtpError("");
-        onToast && onToast("✅ Mobile number verified successfully via Phone.Email!");
+        onToast &&
+          onToast("✅ Mobile number verified successfully via Phone.Email!");
       } else {
         throw new Error(res.message || "Invalid OTP code");
       }
     } catch (err) {
-      const msg = err.message || "Invalid OTP code. Please check your SMS and enter the 6-digit code received.";
+      const msg =
+        err.message ||
+        "Invalid OTP code. Please check your SMS and enter the 6-digit code received.";
       setOtpError(msg);
       onToast && onToast(`❌ ${msg}`);
     } finally {
@@ -370,7 +377,8 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
     }
 
     if (!agreeTerms) {
-      const msg = "Please agree to the Sharekart Terms & P2P Escrow Policy to proceed.";
+      const msg =
+        "Please agree to the Sharekart Terms & P2P Escrow Policy to proceed.";
       setError(msg);
       onToast && onToast(`⚠️ ${msg}`);
       return;
@@ -378,7 +386,9 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
 
     setLoading(true);
     try {
-      let finalLocation = regLocation ? regLocation.trim() : "Gandhinagar, Sector 7";
+      let finalLocation = regLocation
+        ? regLocation.trim()
+        : "Gandhinagar, Sector 7";
       let finalCity = regCity;
       let finalPincode = regPincode;
 
@@ -534,7 +544,7 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
           </div>
 
           {/* Gandhinagar Local Community Quote */}
-          <div className="relative z-10 pt-6 mt-6 border-t border-white/15">
+          {/* <div className="relative z-10 pt-6 mt-6 border-t border-white/15">
             <div className="flex items-center gap-3">
               <img
                 src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
@@ -552,7 +562,7 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
               "Rented a Sony A6400 camera for a weekend trip to Gir. Smooth
               handover, exact deposit refund right on time!"
             </p>
-          </div>
+          </div> */}
         </div>
 
         {/* RIGHT COLUMN: Dedicated Auth Card (Tabs & Form) */}
@@ -876,7 +886,6 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
                     )}
                   </div>
 
-
                   {/* Error message always visible right below phone input */}
                   {otpError && !otpSent && (
                     <div className="mt-1 text-[11px] text-error font-medium flex items-center gap-1 bg-error/10 px-2.5 py-1.5 rounded-lg border border-error/20 animate-fade-in">
@@ -1018,7 +1027,10 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-label-bold text-on-surface">
-                      City / Neighborhood <span className="text-primary font-bold">(Live Location)</span>
+                      City / Neighborhood{" "}
+                      <span className="text-primary font-bold">
+                        (Live Location)
+                      </span>
                     </label>
                     <button
                       type="button"
@@ -1027,10 +1039,16 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
                       className="inline-flex items-center gap-1 text-[11px] font-label-bold text-secondary hover:underline cursor-pointer disabled:opacity-50"
                       title="Use device GPS to detect location"
                     >
-                      <span className={`material-symbols-outlined text-[13px] ${detectingLocation ? 'animate-spin' : ''}`}>
-                        {detectingLocation ? 'progress_activity' : 'my_location'}
+                      <span
+                        className={`material-symbols-outlined text-[13px] ${detectingLocation ? "animate-spin" : ""}`}
+                      >
+                        {detectingLocation
+                          ? "progress_activity"
+                          : "my_location"}
                       </span>
-                      <span>{detectingLocation ? 'Detecting...' : 'Use Current Loc'}</span>
+                      <span>
+                        {detectingLocation ? "Detecting..." : "Use Current Loc"}
+                      </span>
                     </button>
                   </div>
                   <div className="relative flex items-center">
@@ -1050,17 +1068,27 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
                     />
                   </div>
                   {locationMsg && (
-                    <div className={`text-[11px] flex items-center gap-1 mt-0.5 ${
-                      locationStatus === 'success'
-                        ? 'text-emerald-600 dark:text-emerald-400 font-medium'
-                        : locationStatus === 'denied'
-                        ? 'text-amber-600 dark:text-amber-400'
-                        : detectingLocation
-                        ? 'text-secondary'
-                        : 'text-on-surface-variant'
-                    }`}>
-                      <span className={`material-symbols-outlined text-[13px] shrink-0 ${detectingLocation ? 'animate-spin' : ''}`}>
-                        {detectingLocation ? 'progress_activity' : locationStatus === 'success' ? 'check_circle' : locationStatus === 'denied' ? 'lock' : 'info'}
+                    <div
+                      className={`text-[11px] flex items-center gap-1 mt-0.5 ${
+                        locationStatus === "success"
+                          ? "text-emerald-600 dark:text-emerald-400 font-medium"
+                          : locationStatus === "denied"
+                            ? "text-amber-600 dark:text-amber-400"
+                            : detectingLocation
+                              ? "text-secondary"
+                              : "text-on-surface-variant"
+                      }`}
+                    >
+                      <span
+                        className={`material-symbols-outlined text-[13px] shrink-0 ${detectingLocation ? "animate-spin" : ""}`}
+                      >
+                        {detectingLocation
+                          ? "progress_activity"
+                          : locationStatus === "success"
+                            ? "check_circle"
+                            : locationStatus === "denied"
+                              ? "lock"
+                              : "info"}
                       </span>
                       <span>{locationMsg}</span>
                     </div>
