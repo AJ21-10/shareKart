@@ -27,11 +27,11 @@ export const api = {
     return handleResponse(res);
   },
 
-  async register(name, email, password, phone, location) {
+  async register(name, email, password, phone, location, city, pincode) {
     const res = await fetch(`${API_BASE}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, phone, location })
+      body: JSON.stringify({ name, email, password, phone, location, city, pincode })
     });
     return handleResponse(res);
   },

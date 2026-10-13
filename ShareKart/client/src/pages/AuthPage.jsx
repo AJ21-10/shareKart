@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { api } from "../services/api";
+import { getCurrentLocation } from "../services/locationService";
 
 export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
   const {
@@ -28,10 +29,47 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
   const [regEmail, setRegEmail] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regLocation, setRegLocation] = useState("Gandhinagar, Sector 7");
+  const [regCity, setRegCity] = useState("Gandhinagar");
+  const [regPincode, setRegPincode] = useState("382010");
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [locationMsg, setLocationMsg] = useState("");
+  const [locationStatus, setLocationStatus] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regConfirmPassword, setRegConfirmPassword] = useState("");
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(true);
+
+  const handleDetectCurrentLocation = async (isAuto = false) => {
+    setDetectingLocation(true);
+    if (!isAuto) {
+      setLocationMsg("Requesting browser GPS permission...");
+    }
+    const res = await getCurrentLocation();
+    setDetectingLocation(false);
+    if (res.success && res.locationName) {
+      setRegLocation(res.locationName);
+      if (res.address?.city) setRegCity(res.address.city);
+      if (res.address?.postcode) setRegPincode(res.address.postcode);
+      setLocationStatus("success");
+      setLocationMsg(`Live location: ${res.locationName}`);
+      if (!isAuto && onToast) {
+        onToast(`📍 Live location detected: ${res.locationName}`);
+      }
+    } else {
+      setLocationStatus(res.code === "PERMISSION_DENIED" ? "denied" : "error");
+      setLocationMsg(res.message || "Could not detect location.");
+      if (!isAuto && onToast) {
+        onToast(res.message || "Could not detect location.");
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (mode === "register") {
+      // Auto-request live location when user views registration form
+      handleDetectCurrentLocation(true);
+    }
+  }, [mode]);
 
   // Phone OTP state for Registration
   const [regOtp, setRegOtp] = useState(["", "", "", "", "", ""]);
@@ -340,13 +378,34 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
 
     setLoading(true);
     try {
+      let finalLocation = regLocation ? regLocation.trim() : "Gandhinagar, Sector 7";
+      let finalCity = regCity;
+      let finalPincode = regPincode;
+
+      // Ensure live location is captured if not already verified
+      if (locationStatus !== "success") {
+        try {
+          const locRes = await getCurrentLocation({ timeout: 4000 });
+          if (locRes.success && locRes.locationName) {
+            finalLocation = locRes.locationName;
+            finalCity = locRes.address?.city || finalCity;
+            finalPincode = locRes.address?.postcode || finalPincode;
+            setRegLocation(finalLocation);
+          }
+        } catch (e) {
+          console.warn("Live location on page register fallback:", e);
+        }
+      }
+
       const formattedPhone = `+91 ${cleanPhone.slice(0, 5)} ${cleanPhone.slice(5)}`;
       const res = await register(
         regName.trim(),
         regEmail.trim(),
         regPassword,
         formattedPhone,
-        regLocation.trim(),
+        finalLocation,
+        finalCity,
+        finalPincode,
       );
 
       if (res.success) {
@@ -957,9 +1016,23 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
 
                 {/* City / Area Location */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-label-bold text-on-surface">
-                    City / Neighborhood
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-label-bold text-on-surface">
+                      City / Neighborhood <span className="text-primary font-bold">(Live Location)</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleDetectCurrentLocation(false)}
+                      disabled={detectingLocation}
+                      className="inline-flex items-center gap-1 text-[11px] font-label-bold text-secondary hover:underline cursor-pointer disabled:opacity-50"
+                      title="Use device GPS to detect location"
+                    >
+                      <span className={`material-symbols-outlined text-[13px] ${detectingLocation ? 'animate-spin' : ''}`}>
+                        {detectingLocation ? 'progress_activity' : 'my_location'}
+                      </span>
+                      <span>{detectingLocation ? 'Detecting...' : 'Use Current Loc'}</span>
+                    </button>
+                  </div>
                   <div className="relative flex items-center">
                     <span className="material-symbols-outlined absolute left-3 text-[18px] text-on-surface-variant">
                       location_on
@@ -967,11 +1040,31 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
                     <input
                       type="text"
                       value={regLocation}
-                      onChange={(e) => setRegLocation(e.target.value)}
+                      onChange={(e) => {
+                        setRegLocation(e.target.value);
+                        setLocationStatus("");
+                        setLocationMsg("");
+                      }}
                       placeholder="e.g. Gandhinagar, Sector 7"
                       className="w-full bg-surface-container-low border border-outline-variant rounded-xl pl-9 pr-3 py-2 text-xs sm:text-body-sm text-on-surface placeholder:text-on-surface-variant/60 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                     />
                   </div>
+                  {locationMsg && (
+                    <div className={`text-[11px] flex items-center gap-1 mt-0.5 ${
+                      locationStatus === 'success'
+                        ? 'text-emerald-600 dark:text-emerald-400 font-medium'
+                        : locationStatus === 'denied'
+                        ? 'text-amber-600 dark:text-amber-400'
+                        : detectingLocation
+                        ? 'text-secondary'
+                        : 'text-on-surface-variant'
+                    }`}>
+                      <span className={`material-symbols-outlined text-[13px] shrink-0 ${detectingLocation ? 'animate-spin' : ''}`}>
+                        {detectingLocation ? 'progress_activity' : locationStatus === 'success' ? 'check_circle' : locationStatus === 'denied' ? 'lock' : 'info'}
+                      </span>
+                      <span>{locationMsg}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Password & Confirm Password Grid */}

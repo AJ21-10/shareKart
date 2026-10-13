@@ -5,7 +5,7 @@ import { parseJson } from '../utils/helpers.js';
 
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password, phone, location } = req.body;
+    const { name, email, password, phone, location, city, pincode } = req.body;
 
     if (!name || !email || !password) {
       return res.sendError(400, 'Name, email, and password are required.', null, 'BAD_REQUEST');
@@ -35,8 +35,8 @@ export const register = async (req, res, next) => {
     const defaultAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name.trim())}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
 
     const insertSql = `
-      INSERT INTO users (name, email, password_hash, phone, location, avatar_url, is_aadhaar_verified, aadhaar_hash, aadhaar_number, member_since)
-      VALUES (?, ?, ?, ?, ?, ?, false, NULL, NULL, ?)
+      INSERT INTO users (name, email, password_hash, phone, location, city, pincode, avatar_url, is_aadhaar_verified, aadhaar_hash, aadhaar_number, member_since)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, false, NULL, NULL, ?)
       RETURNING id
     `;
 
@@ -46,6 +46,8 @@ export const register = async (req, res, next) => {
       passwordHash,
       phone ? phone.trim() : '+91 98765 00000',
       location ? location.trim() : 'Gandhinagar, 382010',
+      city ? city.trim() : 'Gandhinagar',
+      pincode ? pincode.trim() : '382010',
       defaultAvatar,
       'Oct 2026'
     ]);

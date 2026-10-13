@@ -72,8 +72,8 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const register = async (name, email, password, phone, location) => {
-    const data = await api.register(name, email, password, phone, location);
+  const register = async (name, email, password, phone, location, city, pincode) => {
+    const data = await api.register(name, email, password, phone, location, city, pincode);
     if (data.success) {
       // Clear legacy/guest cart and ensure new user starts with an empty cart
       localStorage.removeItem('sharekart_cart');
@@ -84,6 +84,10 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('sharekart_token', data.token);
       setToken(data.token);
       setUser(data.user);
+      if (data.user?.location) {
+        setCurrentLocation(data.user.location);
+        localStorage.setItem('sharekart_current_location', data.user.location);
+      }
     }
     return data;
   };
