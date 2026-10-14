@@ -14,10 +14,7 @@ const createProductRules = {
   },
   category_id: {
     required: true,
-    type: 'number',
-    min: 1,
-    requiredMessage: 'category_id is required',
-    typeMessage: 'category_id must be a valid number'
+    requiredMessage: 'category_id is required'
   },
   transaction_type: {
     required: true,
