@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { Navbar } from "./components/Navbar";
-import { Footer } from "./components/Footer";
 import { AuthModal } from "./components/AuthModal";
 import { CartDrawer } from "./components/CartDrawer";
 import { ChatModal } from "./components/ChatModal";
@@ -497,8 +496,6 @@ export function AppContent() {
         <Toast message={toastMessage} onClose={() => setToastMessage("")} />
       )}
 
-      {/* Footer */}
-      <Footer onNavigate={navigateTo} />
     </div>
   );
 }

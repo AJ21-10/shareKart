@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { LocationModal } from "./LocationModal";
@@ -28,6 +28,33 @@ export const Navbar = ({
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const profileRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setProfileDropdownOpen(false);
+      }
+    };
+
+    if (profileDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [profileDropdownOpen]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -199,7 +226,7 @@ export const Navbar = ({
               {/* User Profile & Demo Persona Switcher */}
               <div className="relative pl-1 sm:pl-space-4 border-l border-outline/30 shrink-0">
                 {isAuthenticated ? (
-                  <div>
+                  <div ref={profileRef} className="relative">
                     <button
                       onClick={() =>
                         setProfileDropdownOpen(!profileDropdownOpen)
