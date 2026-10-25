@@ -372,7 +372,11 @@ export const sendRegistrationOtp = async (req, res, next) => {
     }
 
     // 1. Dispatch REAL SMS via Phone.Email network
-    const clientId = process.env.CLIENT_ID || process.env.PHONE_EMAIL_CLIENT_ID || '11753610740663059476';
+    const clientId =
+      process.env.PHONE_EMAIL_CLIENT_ID ||
+      process.env.CLIENT_ID ||
+      process.env.PHONE_EMAIL_API_KEY ||
+      '11753610740663059476';
     let peSuccess = false;
     let peStatusMessage = '';
 
@@ -468,7 +472,11 @@ export const verifyRegistrationOtp = async (req, res, next) => {
     }
     const cleanPhone = phone.replace(/\D/g, '').slice(-10);
     const inputOtp = otp.toString().trim();
-    const clientId = process.env.CLIENT_ID || process.env.PHONE_EMAIL_CLIENT_ID || '11753610740663059476';
+    const clientId =
+      process.env.PHONE_EMAIL_CLIENT_ID ||
+      process.env.CLIENT_ID ||
+      process.env.PHONE_EMAIL_API_KEY ||
+      '11753610740663059476';
 
     // 1. Verify against Phone.Email network session (Real SMS)
     const peSessions = getPeSessions();

@@ -2,4 +2,6 @@ node_modules/
 *.log
 .DS_Store
 client/.env
+client/.env.example
 server/.env
+server/.env.example
