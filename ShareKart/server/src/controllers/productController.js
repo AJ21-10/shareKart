@@ -1,5 +1,6 @@
 import db from '../config/db.js';
 import { parseJson } from '../utils/helpers.js';
+import { calculateDistanceKm } from '../utils/locationHelper.js';
 
 export const getProducts = async (req, res, next) => {
   try {
@@ -12,6 +13,7 @@ export const getProducts = async (req, res, next) => {
       maxDistance,
       verifiedOnly,
       sort,
+      location,
       status = 'active',
       limit = 50
     } = req.query;
@@ -73,7 +75,7 @@ export const getProducts = async (req, res, next) => {
       params.push(Number(maxPrice), Number(maxPrice), Number(maxPrice), Number(maxPrice));
     }
 
-    if (maxDistance) {
+    if (!location && maxDistance) {
       query += ` AND p.distance_km <= ?`;
       params.push(Number(maxDistance));
     }
@@ -82,32 +84,9 @@ export const getProducts = async (req, res, next) => {
       query += ` AND u.is_aadhaar_verified = true`;
     }
 
-    // Sorting
-    switch (sort) {
-      case 'price_asc':
-        query += ` ORDER BY CASE WHEN p.rent_price_daily > 0 THEN p.rent_price_daily ELSE p.sale_price END ASC`;
-        break;
-      case 'price_desc':
-        query += ` ORDER BY CASE WHEN p.rent_price_daily > 0 THEN p.rent_price_daily ELSE p.sale_price END DESC`;
-        break;
-      case 'rating':
-        query += ` ORDER BY u.rating DESC`;
-        break;
-      case 'latest':
-        query += ` ORDER BY p.id DESC`;
-        break;
-      case 'distance':
-      default:
-        query += ` ORDER BY p.distance_km ASC`;
-        break;
-    }
-
-    query += ` LIMIT ?`;
-    params.push(Number(limit));
-
     const rows = await db.all(query, params);
 
-    const products = rows.map(p => ({
+    let allProducts = rows.map(p => ({
       ...p,
       images: parseJson(p.images, []),
       specs: parseJson(p.specs, {}),
@@ -115,10 +94,85 @@ export const getProducts = async (req, res, next) => {
       pickup_locations: parseJson(p.pickup_locations, [])
     }));
 
+    // If user location is passed, compute real distance from location to each product
+    if (location) {
+      allProducts = allProducts.map(p => ({
+        ...p,
+        distance_km: calculateDistanceKm(location, p.location_name)
+      }));
+    }
+
+    const sortByField = (list) => {
+      return [...list].sort((a, b) => {
+        switch (sort) {
+          case 'price_asc': {
+            const priceA = a.rent_price_daily > 0 ? a.rent_price_daily : a.sale_price;
+            const priceB = b.rent_price_daily > 0 ? b.rent_price_daily : b.sale_price;
+            return priceA - priceB;
+          }
+          case 'price_desc': {
+            const priceA = a.rent_price_daily > 0 ? a.rent_price_daily : a.sale_price;
+            const priceB = b.rent_price_daily > 0 ? b.rent_price_daily : b.sale_price;
+            return priceB - priceA;
+          }
+          case 'rating':
+            return (b.seller_rating || 0) - (a.seller_rating || 0);
+          case 'latest':
+            return b.id - a.id;
+          case 'distance':
+          default:
+            return a.distance_km - b.distance_km;
+        }
+      });
+    };
+
+    let products = allProducts;
+    let nearbySuggestions = [];
+    let nearestLocations = [];
+
+    if (location && maxDistance) {
+      const radius = Number(maxDistance);
+      const filteredInRadius = allProducts.filter(p => p.distance_km <= radius);
+
+      if (filteredInRadius.length > 0) {
+        products = sortByField(filteredInRadius).slice(0, Number(limit));
+        // Collect extra suggestions outside radius if available
+        const outsideRadius = allProducts.filter(p => p.distance_km > radius);
+        if (outsideRadius.length > 0) {
+          nearbySuggestions = outsideRadius
+            .sort((a, b) => a.distance_km - b.distance_km)
+            .slice(0, 4);
+        }
+      } else {
+        // Zero products within user's area / radius
+        products = [];
+        nearbySuggestions = sortByField(allProducts).slice(0, Number(limit));
+
+        const locMap = {};
+        for (const item of nearbySuggestions) {
+          const locName = item.location_name || 'Gandhinagar';
+          if (!locMap[locName]) {
+            locMap[locName] = {
+              location: locName,
+              distance_km: item.distance_km,
+              itemCount: 0
+            };
+          }
+          locMap[locName].itemCount++;
+        }
+        nearestLocations = Object.values(locMap).sort((a, b) => a.distance_km - b.distance_km);
+      }
+    } else {
+      products = sortByField(allProducts).slice(0, Number(limit));
+    }
+
     res.json({
       success: true,
       count: products.length,
-      products
+      products,
+      userLocation: location || null,
+      nearbySuggestions,
+      nearestLocations
     });
   } catch (error) {
     next(error);

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useMarketplace } from '../context/MarketplaceContext';
 import { getCurrentLocation } from '../services/locationService';
 
 export const LocationModal = ({ isOpen, onClose, onToast }) => {
   const { currentLocation, updateLocation } = useAuth();
+  const { hubs } = useMarketplace();
   const [detecting, setDetecting] = useState(false);
   const [locationError, setLocationError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -11,75 +13,8 @@ export const LocationModal = ({ isOpen, onClose, onToast }) => {
 
   if (!isOpen) return null;
 
-  // Curated list of nearby localities & micro-markets
-  const nearbyLocations = [
-    {
-      name: 'Infocity, Kudasan',
-      pincode: '382007',
-      distance: '1.2 km away',
-      hub: 'Primary Tech & Rental Hub'
-    },
-    {
-      name: 'Gandhinagar, Sector 7',
-      pincode: '382010',
-      distance: '0.8 km away',
-      hub: 'Central Residential Area'
-    },
-    {
-      name: 'Sector 21 Main Market',
-      pincode: '382021',
-      distance: '2.1 km away',
-      hub: 'Tools & Electronics Market'
-    },
-    {
-      name: 'DA-IICT & NIFT Campus',
-      pincode: '382007',
-      distance: '1.8 km away',
-      hub: 'Student Tech Hub'
-    },
-    {
-      name: 'PDPU Road, Raisan',
-      pincode: '382421',
-      distance: '3.5 km away',
-      hub: 'University Hub'
-    },
-    {
-      name: 'GIFT City SEZ',
-      pincode: '382355',
-      distance: '5.2 km away',
-      hub: 'Financial & Corporate Center'
-    },
-    {
-      name: 'Vavol Township',
-      pincode: '382016',
-      distance: '3.1 km away',
-      hub: 'Residential Suburb'
-    },
-    {
-      name: 'Sargasan Cross Roads',
-      pincode: '382421',
-      distance: '4.0 km away',
-      hub: 'Commercial Highway Hub'
-    },
-    {
-      name: 'Koba Circle, Airport Highway',
-      pincode: '382007',
-      distance: '6.5 km away',
-      hub: 'Transit Junction'
-    },
-    {
-      name: 'Chandkheda & Motera (Ahmedabad Border)',
-      pincode: '380005',
-      distance: '9.8 km away',
-      hub: 'Metro Station Area'
-    },
-    {
-      name: 'Vastrapur / SG Highway (Ahmedabad)',
-      pincode: '380015',
-      distance: '18.0 km away',
-      hub: 'Commercial Tech Hub'
-    }
-  ];
+  // Curated list of nearby localities & micro-markets derived dynamically
+  const nearbyLocations = hubs;
 
   const filteredLocations = nearbyLocations.filter(loc => 
     loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

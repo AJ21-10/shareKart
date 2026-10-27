@@ -95,7 +95,17 @@ export const api = {
 
   // Products
   async getProducts(params = {}) {
-    const queryString = new URLSearchParams(params).toString();
+    const defaultLoc = localStorage.getItem('sharekart_current_location') || 'Gandhinagar, Sector 7';
+    const queryPayload = {
+      location: defaultLoc,
+      ...params,
+    };
+    Object.keys(queryPayload).forEach((k) => {
+      if (queryPayload[k] === '' || queryPayload[k] === null || queryPayload[k] === undefined) {
+        delete queryPayload[k];
+      }
+    });
+    const queryString = new URLSearchParams(queryPayload).toString();
     const res = await fetch(`${API_BASE}/products?${queryString}`);
     return handleResponse(res);
   },

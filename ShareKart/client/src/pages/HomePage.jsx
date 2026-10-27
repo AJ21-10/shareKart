@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import { useMarketplace } from "../context/MarketplaceContext";
 
 export const HomePage = ({
   onNavigate,
@@ -7,172 +9,138 @@ export const HomePage = ({
   onQuickRent,
   onToast,
 }) => {
+  const { currentLocation, updateLocation } = useAuth();
+  const {
+    products: contextProducts,
+    categories,
+    featurePillars,
+    howItWorks,
+    trustBadges,
+    valueProps,
+    filterProducts,
+  } = useMarketplace();
+
   const [activeTab, setActiveTab] = useState("all"); // 'all', 'rent', 'buy'
   const [favorites, setFavorites] = useState({});
   const [apiProducts, setApiProducts] = useState([]);
+  const [nearbySuggestions, setNearbySuggestions] = useState([]);
+  const [nearestLocations, setNearestLocations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [heroSlide, setHeroSlide] = useState(0);
 
+  // Derive source products: use apiProducts if fetched successfully, otherwise contextProducts
+  const sourceProducts = (apiProducts && apiProducts.length > 0) ? apiProducts : (contextProducts || []);
+
+  // Format any product consistently (from API or initialData)
+  const formatProduct = (p) => {
+    if (!p) return null;
+    const isRent = p.transaction_type === "rent" || p.type === "rent";
+    const isBuy = p.transaction_type === "buy" || p.type === "buy";
+    const isBoth = p.transaction_type === "both" || p.type === "both";
+
+    const badge = isBoth ? "Buy or Rent" : isRent ? "For Rent" : "For Sale";
+    const badgeColor = isBoth
+      ? "bg-primary-container text-on-primary"
+      : isRent
+      ? "bg-secondary text-on-secondary"
+      : "bg-primary text-on-primary";
+
+    const dailyPrice = p.rent_price_daily != null ? p.rent_price_daily : p.price_daily;
+    const salePrice = p.sale_price != null ? p.sale_price : p.price_sale;
+
+    const price = dailyPrice != null
+      ? `₹${Number(dailyPrice).toLocaleString("en-IN")}`
+      : salePrice != null
+      ? `₹${Number(salePrice).toLocaleString("en-IN")}`
+      : p.price || "₹0";
+
+    const priceSub = isRent
+      ? "/ day"
+      : isBoth
+      ? dailyPrice != null ? `or ₹${dailyPrice}/d` : null
+      : (p.security_deposit ? `Deposit: ₹${p.security_deposit}` : null);
+
+    const locationStr = p.distance_km != null
+      ? `${p.distance_km} km away`
+      : p.location || p.location_name || "Gandhinagar";
+
+    const image = p.images?.[0] || p.image || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80";
+    const subBadge = p.condition || p.condition_tag || (isBuy ? "Pre-owned" : "Instant Pickup");
+    const rating = p.seller_rating || (p.reviews?.length ? "4.9" : null);
+
+    return {
+      ...p,
+      badge,
+      badgeColor,
+      badgeClass: badgeColor,
+      subBadge,
+      rating,
+      price,
+      priceSub,
+      location: locationStr,
+      image,
+      type: p.transaction_type || p.type,
+      bottomChip: p.seller_is_verified || p.bottomChip?.type === "aadhaar"
+        ? {
+            type: "aadhaar",
+            text: "Aadhaar Verified",
+            icon: "verified",
+            classes: "bg-secondary-container/30 text-on-secondary-container",
+          }
+        : {
+            type: "rating",
+            text: `${p.seller_rating || "4.8"} (${p.seller_total_reviews || 12} reviews)`,
+            icon: "star",
+            classes: "bg-surface-container text-on-surface",
+          },
+    };
+  };
+
+  const heroProducts = (sourceProducts || []).map(formatProduct).filter(Boolean).slice(0, 4);
+
   // Automatic slider timer for mobile/small screen hero cards
   useEffect(() => {
+    if (heroProducts.length <= 1) return;
     const timer = setInterval(() => {
-      setHeroSlide((prev) => (prev + 1) % 4);
+      setHeroSlide((prev) => (prev + 1) % heroProducts.length);
     }, 3200);
     return () => clearInterval(timer);
-  }, []);
-
-  // 4 Featured hero elements for mobile slider and desktop floating display
-  const floatingCards = [
-    {
-      id: 3,
-      title: "Dell Latitude 5420 i5 11th Gen",
-      price: "₹24,500",
-      priceSub: null,
-      badge: "For Sale",
-      badgeClass: "bg-primary text-on-primary",
-      subBadge: "Used · Good",
-      rating: null,
-      tag: null,
-      location: "2.5 km away",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuBY1-PEG8IEwaBye7YINtDGuzCLhCZQh1hfg55-R1WFWJhYBYhU7S_pn31J9DALQhXly2kXh2i7vrPVM2hQyy4mgzxr9TgM2ETg5KyGHXBsg2nUisSusG_Sf1vz7hhzZ9ub3h6-ban-s6a_eqxpURNfEmBL7A-UW0epmoJDatDo_awjvZDqk0pqyKwZiMZlJ_BB0o5n0FgtVGysmFVuugTLV-gJNEarFqZlsX51hldHL1yFTh3INbTOcQ",
-    },
-    {
-      id: 1,
-      title: "Sony Alpha A6400 Kit",
-      price: "₹850",
-      priceSub: "/ day",
-      badge: "For Rent",
-      badgeClass: "bg-secondary text-on-secondary",
-      subBadge: null,
-      rating: "4.9",
-      tag: null,
-      location: "1.8 km away",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuBSucvfcJQNo_qFWB5oHI7pEXJMtslQMPqBEZt3-9nS3_2NI10UswRHV5oamAM_pZx6TVWfumSWs9aPgaqN7YslIuosS14OQ5lxsrEpu_11IvZaAAo5_MTdJOsgXbAOImZzcrGP9th6z8zNv3y9N_KSd1Tg95deb7Ih-pjW-GyusiZBFBjxQgSvmagmR6tcaH1O2Ji2hzLgcqohKSxdxM1bUOvx3iT7BVJtMMUCDmttbFfianb7lJPKPQ",
-    },
-    {
-      id: 2,
-      title: "Bosch Rotary Drill Set",
-      price: "₹200",
-      priceSub: "/ day",
-      badge: "For Rent",
-      badgeClass: "bg-secondary text-on-secondary",
-      subBadge: null,
-      rating: null,
-      tag: "Ready now",
-      location: "📍 Nearby · Infocity",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuBg_5mbBAxo6BN1Y7YZtd6It1ZtWEgV2pP0eGANqiO9dJp99IdyV_JPxiSpDAX8leCDSFPXgkNyrx-FCGPHvw55uqZ15bqZ7ffBcbh4QpEv_ifF84kv9ivkXRJR7lZrRfGMJPb_sBeXiDFWaXJHc5Z873O6bKcbtkJj1ZRGU_PUpgr7XXIcP4CUxCfmlWWMm48SyP2L3BqnBoNhs75luUWDqc6raResHrsBtpg5v_Da-JpU2-Ix03jlnw",
-    },
-    {
-      id: 4,
-      title: "Hero Sprint MTB 26T",
-      price: "₹4,500",
-      priceSub: "or ₹120/d",
-      badge: "Buy or Rent",
-      badgeClass: "bg-primary-container text-on-primary",
-      subBadge: null,
-      rating: null,
-      tag: null,
-      location: "3.2 km away · Sector 21",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuCaOqraxOhKr04WK54jy3aJntK7q24DXHLpf0Fvdw5wWxxO2F7EZdsPcS2lHfehmqkv8VgPFQHAalSc-gPKpQgP3UKguR4cEnRSaVm3gACMSFiZ2Ouq2ucNDZsVgrB3O1ylmbcYEAHeKQpRAKPN_w0R8U2NvMiTvPh5pIZzNIL38oU0mWT3uuKEfkRc_9O_RakandwfpXlrmJINPUp6q3cvpzMgTBl9fVRE2F1pVpdPWzW-DCgeMIGRtg",
-    },
-  ];
-
-  // Spotlight featured products exactly as shown in code copy.html & screen copy.png
-  const featuredProducts = [
-    {
-      id: 3,
-      title: "Dell Latitude 5420 Laptop",
-      type: "buy",
-      badge: "Buy",
-      badgeColor: "bg-primary text-on-primary",
-      location: "Sector 14 • 1.8 km away",
-      tag: "Used - Like New",
-      price: "₹24,500",
-      priceSub: null,
-      bottomChip: {
-        type: "aadhaar",
-        text: "Aadhaar Verified",
-        icon: "verified",
-        classes: "bg-secondary-container/30 text-on-secondary-container",
-      },
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuBsuOdQGJYZntUUSK46dvzI07mZDusjuzFht-lPHvHn4IR0hUQuYby5fE5XoTasXHztJbFgWEFEY4Q4QdiYskp43GA2fkCJfiZs0b23yMsD7HOHpLeot9gE63UaFQ8OiZZpn-YdoYwQHaZjvWjRl_kl0zaVFMIi0qwJPTKkZsbtpU-ycpjMFeXTWgiyhlEgs6HP60oDGHPs-KGyVxtK0g3KWP1RF69bCgrvYm7OHdviPXgUZOZ6hasNjA",
-    },
-    {
-      id: 2,
-      title: "Bosch Rotary Hammer Drill",
-      type: "rent",
-      badge: "Rent",
-      badgeColor: "bg-secondary text-on-secondary",
-      location: "Infocity • 3.2 km away",
-      price: "₹350 / day",
-      priceSub: "Deposit: ₹1,500",
-      bottomChip: {
-        type: "aadhaar",
-        text: "Aadhaar Verified",
-        icon: "verified",
-        classes: "bg-secondary-container/30 text-on-secondary-container",
-      },
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuDJTG7GkgQYGCi0kwmJY7n8-UZn5Nhd11Jbzsy5lR-jTnX0XlSAjfqvAoeKur6iGYVxAlA3BO-06Cy7e6L7KWFNn-PW07AEWUm71D2otwZmoDg6Cqf9KlhqCdCkv5JIx290aQw_Z0oyJW1KN2B-qXPq_GIDkQefaJ7YjQlydXMtka8x8xtjFr1ghKWL592TKGMXNxhe4iSYYRSMyFnBZAe-_KlByS5RGWpzQwT5BbMX5yjIzXWVBMcpww",
-    },
-    {
-      id: 1,
-      title: "Sony Alpha A6400 Kit",
-      type: "rent",
-      badge: "Rent",
-      badgeColor: "bg-secondary text-on-secondary",
-      location: "Kudasan • 2.5 km away",
-      price: "₹850 / day",
-      priceSub: "or Buy ₹48k",
-      bottomChip: {
-        type: "rating",
-        text: "5.0 (14 rentals)",
-        icon: "star",
-        classes: "bg-surface-container text-on-surface",
-      },
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuCllUNpLeCA2DoJuevdAZA5D_HkYp7uW5fRFlnkIM2I57OqnBNFu9udnuRyv6ggba2Dwnh4wB49x_vAD_7TJjVn-hZC6uw0fevDYmcv_aNS2zObpEk3OQGP8hS359x6nU_IEPIlH_XJxUzvY22YCHXs5-8uk_z-veuU1XcpQEz6XavekyF8SvQieB1aCLP-7AUecBUoX_qh1LjoFQHL8OYBNxrDzhDUj-6r-QMZ2KOYpTxDZCT4Ep-AoA",
-    },
-    {
-      id: 4,
-      title: "Hero Sprint 21-Speed MTB",
-      type: "both",
-      badge: "Buy or Rent",
-      badgeColor: "bg-primary-container text-on-primary",
-      location: "Sector 21 • 3.5 km away",
-      price: "₹4,500",
-      priceSub: "or ₹120/day",
-      bottomChip: {
-        type: "aadhaar",
-        text: "Aadhaar Verified",
-        icon: "verified",
-        classes: "bg-secondary-container/30 text-on-secondary-container",
-      },
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuAWBcetbhhtCGQHkRZmc_Ju_jfJUqs6j7t97pxdjR1ene0jl8TXYfjxqBamjbUg-jenZ3lb4C5sZH8EMebbLAxhSY1R3ujxCit1IKwQ_MFJEl4_5k6DfLXL-gD_P5xaNtb5S1rALZn0T3gRD4u46dN1h_nW73e-ViDGmtORuZDK3z0lCWbKkIASA83MWLW2mofujUB62MH7aGii48caCi9FogGUnmGmkRCilzqJyrlnw3jRE_-zxWIlNA",
-    },
-  ];
+  }, [heroProducts.length]);
 
   useEffect(() => {
     loadProducts();
-  }, [activeTab]);
+  }, [activeTab, currentLocation]);
 
   const loadProducts = async () => {
     try {
       setLoading(true);
       const res = await api.getProducts({
         type: activeTab !== "all" ? activeTab : "",
+        location: currentLocation || "",
+        maxDistance: 10,
       });
-      if (res.success && res.products) {
-        setApiProducts(res.products);
+      if (res?.success && res.products) {
+        setApiProducts(res.products || []);
+        setNearbySuggestions(res.nearbySuggestions || []);
+        setNearestLocations(res.nearestLocations || []);
+      } else {
+        const local = filterProducts ? filterProducts({
+          type: activeTab !== "all" ? activeTab : "",
+          location: currentLocation || "",
+          maxDistance: 10,
+        }) : { products: [], nearbySuggestions: [] };
+        setApiProducts(local.products || []);
+        setNearbySuggestions(local.nearbySuggestions || []);
       }
     } catch (err) {
-      console.error("Failed to load products from API:", err);
+      console.warn("API products load fallback to context", err);
+      const local = filterProducts ? filterProducts({
+        type: activeTab !== "all" ? activeTab : "",
+        location: currentLocation || "",
+        maxDistance: 10,
+      }) : { products: [], nearbySuggestions: [] };
+      setApiProducts(local.products || []);
+      setNearbySuggestions(local.nearbySuggestions || []);
     } finally {
       setLoading(false);
     }
@@ -191,12 +159,16 @@ export const HomePage = ({
     });
   };
 
-  const displayedProducts = featuredProducts.filter((item) => {
-    if (activeTab === "rent")
-      return item.type === "rent" || item.type === "both";
-    if (activeTab === "buy") return item.type === "buy" || item.type === "both";
-    return true;
-  });
+  const displayedProducts = (sourceProducts || [])
+    .filter((item) => {
+      if (!item) return false;
+      const type = item.transaction_type || item.type;
+      if (activeTab === "rent") return type === "rent" || type === "both";
+      if (activeTab === "buy") return type === "buy" || type === "both";
+      return true;
+    })
+    .map(formatProduct)
+    .filter(Boolean);
 
   return (
     <div className="flex flex-col w-full -mt-2 sm:-mt-4">
@@ -216,8 +188,7 @@ export const HomePage = ({
               </h1>
 
               <p className="font-body-lg text-body-lg text-on-surface-variant mt-space-8 max-w-lg">
-                Buy, rent or sell products around you. High utility, zero
-                friction, verified neighbors.
+                Buy, rent, or sell with verified neighbors in your area.
               </p>
 
               <div className="flex flex-wrap items-center gap-space-12 mt-space-24 w-full sm:w-auto">
@@ -271,7 +242,7 @@ export const HomePage = ({
                       className="flex transition-transform duration-500 ease-out"
                       style={{ transform: `translateX(-${heroSlide * 100}%)` }}
                     >
-                      {floatingCards.map((card) => (
+                      {heroProducts.map((card) => (
                         <div
                           key={card.id}
                           onClick={() => onNavigate("product", { id: card.id })}
@@ -341,7 +312,7 @@ export const HomePage = ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setHeroSlide((prev) => (prev - 1 + 4) % 4);
+                        setHeroSlide((prev) => (prev - 1 + heroProducts.length) % heroProducts.length);
                       }}
                       className="p-1 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
                       aria-label="Previous slide"
@@ -352,7 +323,7 @@ export const HomePage = ({
                     </button>
 
                     <div className="flex items-center gap-1.5">
-                      {[0, 1, 2, 3].map((idx) => (
+                      {heroProducts.map((_, idx) => (
                         <button
                           key={idx}
                           type="button"
@@ -374,7 +345,7 @@ export const HomePage = ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setHeroSlide((prev) => (prev + 1) % 4);
+                        setHeroSlide((prev) => (prev + 1) % heroProducts.length);
                       }}
                       className="p-1 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
                       aria-label="Next slide"
@@ -389,159 +360,73 @@ export const HomePage = ({
 
               {/* Tablet & Desktop View: Floating Marketplace Product Composition */}
               <div className="hidden md:block relative w-full h-[460px] sm:h-[480px]">
-                {/* Card 1: Laptop */}
-                <div
-                  onClick={() => onNavigate("product", { id: 3 })}
-                  className="animate-float-1 absolute top-2 left-2 sm:left-6 w-64 sm:w-72 bg-surface-container-lowest p-space-12 rounded-xl shadow-md z-20 cursor-pointer border border-outline-variant/40 hover:shadow-xl transition-all"
-                  title="View Dell Latitude 5420"
-                >
-                  <div className="relative w-full h-32 rounded-lg overflow-hidden bg-surface-container">
-                    <img
-                      className="w-full h-full object-cover"
-                      alt="Dell Latitude 5420 i5 11th Gen"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuBY1-PEG8IEwaBye7YINtDGuzCLhCZQh1hfg55-R1WFWJhYBYhU7S_pn31J9DALQhXly2kXh2i7vrPVM2hQyy4mgzxr9TgM2ETg5KyGHXBsg2nUisSusG_Sf1vz7hhzZ9ub3h6-ban-s6a_eqxpURNfEmBL7A-UW0epmoJDatDo_awjvZDqk0pqyKwZiMZlJ_BB0o5n0FgtVGysmFVuugTLV-gJNEarFqZlsX51hldHL1yFTh3INbTOcQ"
-                    />
-                    <span className="absolute top-2 left-2 px-space-8 py-space-2 bg-primary text-on-primary rounded font-badge text-badge">
-                      For Sale
-                    </span>
-                    <span className="absolute top-2 right-2 px-space-6 py-space-2 bg-surface-container-lowest text-on-surface font-badge text-badge rounded">
-                      Used · Good
-                    </span>
-                  </div>
-                  <div className="mt-space-8">
-                    <div className="flex items-baseline justify-between">
-                      <span className="font-price-md text-price-md text-on-surface">
-                        ₹24,500
-                      </span>
-                      <span className="font-body-sm text-body-sm text-outline flex items-center gap-space-2">
-                        <span className="material-symbols-outlined text-xs text-secondary">
-                          location_on
-                        </span>{" "}
-                        2.5 km away
-                      </span>
-                    </div>
-                    <h3 className="font-headline-sm text-body-md font-semibold text-on-surface truncate mt-space-2">
-                      Dell Latitude 5420 i5 11th Gen
-                    </h3>
-                  </div>
-                </div>
-
-                {/* Card 2: Sony Camera */}
-                <div
-                  onClick={() => onNavigate("product", { id: 1 })}
-                  className="animate-float-2 absolute top-12 right-2 sm:right-6 w-60 sm:w-64 bg-surface-container-lowest p-space-12 rounded-xl shadow-md z-30 cursor-pointer border border-outline-variant/40 hover:shadow-xl transition-all"
-                  title="View Sony Alpha A6400"
-                >
-                  <div className="relative w-full h-28 rounded-lg overflow-hidden bg-surface-container">
-                    <img
-                      className="w-full h-full object-cover"
-                      alt="Sony Alpha A6400 Kit"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSucvfcJQNo_qFWB5oHI7pEXJMtslQMPqBEZt3-9nS3_2NI10UswRHV5oamAM_pZx6TVWfumSWs9aPgaqN7YslIuosS14OQ5lxsrEpu_11IvZaAAo5_MTdJOsgXbAOImZzcrGP9th6z8zNv3y9N_KSd1Tg95deb7Ih-pjW-GyusiZBFBjxQgSvmagmR6tcaH1O2Ji2hzLgcqohKSxdxM1bUOvx3iT7BVJtMMUCDmttbFfianb7lJPKPQ"
-                    />
-                    <span className="absolute top-2 left-2 px-space-8 py-space-2 bg-secondary text-on-secondary rounded font-badge text-badge">
-                      For Rent
-                    </span>
-                    <span className="absolute bottom-2 right-2 px-space-6 py-space-2 bg-surface-container-lowest text-on-surface font-badge text-badge rounded flex items-center gap-space-2">
-                      <span className="material-symbols-outlined text-xs text-on-tertiary-container material-symbols-fill">
-                        star
-                      </span>{" "}
-                      4.9
-                    </span>
-                  </div>
-                  <div className="mt-space-8">
-                    <div className="flex items-baseline justify-between">
-                      <span className="font-price-md text-price-md text-secondary">
-                        ₹850{" "}
-                        <span className="font-body-sm text-body-sm text-on-surface-variant font-normal">
-                          / day
+                {heroProducts.map((card, idx) => {
+                  const styles = [
+                    { pos: "top-2 left-2 sm:left-6 w-64 sm:w-72 z-20", anim: "animate-float-1", imgH: "h-32" },
+                    { pos: "top-12 right-2 sm:right-6 w-60 sm:w-64 z-30", anim: "animate-float-2", imgH: "h-28" },
+                    { pos: "bottom-4 left-0 sm:left-4 w-56 sm:w-64 z-10", anim: "animate-float-2", imgH: "h-24" },
+                    { pos: "bottom-6 right-0 sm:right-4 w-64 sm:w-72 z-20", anim: "animate-float-1", imgH: "h-28" },
+                  ];
+                  const s = styles[idx] || styles[0];
+                  return (
+                    <div
+                      key={card.id || idx}
+                      onClick={() => onNavigate("product", { id: card.id })}
+                      className={`${s.anim} absolute ${s.pos} bg-surface-container-lowest p-space-12 rounded-xl shadow-md cursor-pointer border border-outline-variant/40 hover:shadow-xl transition-all`}
+                      title={`View ${card.title}`}
+                    >
+                      <div className={`relative w-full ${s.imgH} rounded-lg overflow-hidden bg-surface-container`}>
+                        <img
+                          className="w-full h-full object-cover"
+                          alt={card.title}
+                          src={card.image}
+                        />
+                        <span className={`absolute top-2 left-2 px-space-8 py-space-2 rounded font-badge text-badge ${card.badgeColor}`}>
+                          {card.badge}
                         </span>
-                      </span>
+                        {card.subBadge && (
+                          <span className="absolute top-2 right-2 px-space-6 py-space-2 bg-surface-container-lowest text-on-surface font-badge text-badge rounded">
+                            {card.subBadge}
+                          </span>
+                        )}
+                        {card.rating && (
+                          <span className="absolute bottom-2 right-2 px-space-6 py-space-2 bg-surface-container-lowest text-on-surface font-badge text-badge rounded flex items-center gap-space-2 shadow-xs">
+                            <span className="material-symbols-outlined text-xs text-on-tertiary-container material-symbols-fill">
+                              star
+                            </span>{" "}
+                            {card.rating}
+                          </span>
+                        )}
+                        {card.tag && (
+                          <span className="absolute bottom-2 right-2 px-space-6 py-space-2 bg-secondary-container/90 text-on-secondary-container font-badge text-badge rounded shadow-xs">
+                            {card.tag}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-space-8">
+                        <div className="flex items-baseline justify-between">
+                          <span className="font-price-md text-price-md text-on-surface font-bold">
+                            {card.price}{" "}
+                            {card.priceSub && (
+                              <span className="font-body-sm text-body-sm text-on-surface-variant font-normal">
+                                {card.priceSub}
+                              </span>
+                            )}
+                          </span>
+                          <span className="font-body-sm text-body-sm text-outline flex items-center gap-space-2">
+                            <span className="material-symbols-outlined text-xs text-secondary">
+                              location_on
+                            </span>{" "}
+                            {card.location}
+                          </span>
+                        </div>
+                        <h3 className="font-headline-sm text-body-md font-semibold text-on-surface truncate mt-space-2">
+                          {card.title}
+                        </h3>
+                      </div>
                     </div>
-                    <p className="font-body-sm text-body-sm text-on-surface font-semibold truncate mt-space-2">
-                      Sony Alpha A6400 Kit
-                    </p>
-                    <p className="font-body-sm text-body-sm text-outline flex items-center gap-space-2 mt-space-2">
-                      <span className="material-symbols-outlined text-xs text-secondary">
-                        near_me
-                      </span>{" "}
-                      1.8 km away
-                    </p>
-                  </div>
-                </div>
-
-                {/* Card 3: Drill Machine */}
-                <div
-                  onClick={() => onNavigate("product", { id: 2 })}
-                  className="animate-float-2 absolute bottom-4 left-0 sm:left-4 w-56 sm:w-64 bg-surface-container-lowest p-space-12 rounded-xl shadow-md z-10 cursor-pointer border border-outline-variant/40 hover:shadow-xl transition-all"
-                  title="View Bosch Rotary Drill"
-                >
-                  <div className="relative w-full h-24 rounded-lg overflow-hidden bg-surface-container">
-                    <img
-                      className="w-full h-full object-cover"
-                      alt="Bosch Rotary Drill Set"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuBg_5mbBAxo6BN1Y7YZtd6It1ZtWEgV2pP0eGANqiO9dJp99IdyV_JPxiSpDAX8leCDSFPXgkNyrx-FCGPHvw55uqZ15bqZ7ffBcbh4QpEv_ifF84kv9ivkXRJR7lZrRfGMJPb_sBeXiDFWaXJHc5Z873O6bKcbtkJj1ZRGU_PUpgr7XXIcP4CUxCfmlWWMm48SyP2L3BqnBoNhs75luUWDqc6raResHrsBtpg5v_Da-JpU2-Ix03jlnw"
-                    />
-                    <span className="absolute top-2 left-2 px-space-6 py-space-2 bg-secondary text-on-secondary rounded font-badge text-badge">
-                      For Rent
-                    </span>
-                  </div>
-                  <div className="mt-space-6">
-                    <div className="flex items-baseline justify-between">
-                      <span className="font-price-md text-price-md text-on-surface">
-                        ₹200{" "}
-                        <span className="font-body-sm text-body-sm text-on-surface-variant font-normal">
-                          / day
-                        </span>
-                      </span>
-                      <span className="font-badge text-badge px-space-6 py-space-2 bg-secondary-container/40 text-on-secondary-container rounded">
-                        Ready now
-                      </span>
-                    </div>
-                    <p className="font-body-sm text-body-sm text-on-surface font-semibold truncate mt-space-2">
-                      Bosch Rotary Drill Set
-                    </p>
-                    <p className="font-body-sm text-body-sm text-outline mt-space-2">
-                      📍 Nearby · Infocity
-                    </p>
-                  </div>
-                </div>
-
-                {/* Card 4: Bicycle */}
-                <div
-                  onClick={() => onNavigate("product", { id: 4 })}
-                  className="animate-float-1 absolute bottom-6 right-0 sm:right-4 w-64 sm:w-72 bg-surface-container-lowest p-space-12 rounded-xl shadow-md z-20 cursor-pointer border border-outline-variant/40 hover:shadow-xl transition-all"
-                  title="View Hero Sprint MTB"
-                >
-                  <div className="relative w-full h-28 rounded-lg overflow-hidden bg-surface-container">
-                    <img
-                      className="w-full h-full object-cover"
-                      alt="Hero Sprint MTB 26T"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaOqraxOhKr04WK54jy3aJntK7q24DXHLpf0Fvdw5wWxxO2F7EZdsPcS2lHfehmqkv8VgPFQHAalSc-gPKpQgP3UKguR4cEnRSaVm3gACMSFiZ2Ouq2ucNDZsVgrB3O1ylmbcYEAHeKQpRAKPN_w0R8U2NvMiTvPh5pIZzNIL38oU0mWT3uuKEfkRc_9O_RakandwfpXlrmJINPUp6q3cvpzMgTBl9fVRE2F1pVpdPWzW-DCgeMIGRtg"
-                    />
-                    <span className="absolute top-2 left-2 px-space-8 py-space-2 bg-primary-container text-on-primary rounded font-badge text-badge">
-                      Buy or Rent
-                    </span>
-                  </div>
-                  <div className="mt-space-6">
-                    <div className="flex items-baseline justify-between">
-                      <span className="font-price-md text-price-md text-on-surface">
-                        ₹4,500{" "}
-                        <span className="font-body-sm text-body-sm text-on-surface-variant font-normal">
-                          or ₹120/d
-                        </span>
-                      </span>
-                    </div>
-                    <p className="font-body-sm text-body-sm text-on-surface font-semibold truncate mt-space-2">
-                      Hero Sprint MTB 26T
-                    </p>
-                    <p className="font-body-sm text-body-sm text-outline flex items-center gap-space-2 mt-space-2">
-                      <span className="material-symbols-outlined text-xs text-secondary">
-                        location_on
-                      </span>{" "}
-                      3.2 km away · Sector 21
-                    </p>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -552,38 +437,25 @@ export const HomePage = ({
       <section className="w-full bg-surface-container-low py-space-16 rounded-xl mb-space-24">
         <div className="max-w-[1240px] mx-auto px-gutter-mobile lg:px-gutter-desktop">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-space-12">
-            <div className="flex items-center justify-center md:justify-start gap-space-8 py-space-6 px-space-12 rounded bg-surface-container-lowest shadow-xs">
-              <span className="material-symbols-outlined text-secondary text-lg">
-                verified_user
-              </span>
-              <span className="font-label-bold text-label-bold text-on-surface">
-                Verified Users
-              </span>
-            </div>
-            <div className="flex items-center justify-center md:justify-start gap-space-8 py-space-6 px-space-12 rounded bg-surface-container-lowest shadow-xs">
-              <span className="material-symbols-outlined text-secondary text-lg">
-                shield
-              </span>
-              <span className="font-label-bold text-label-bold text-on-surface">
-                Secure Payments
-              </span>
-            </div>
-            <div className="flex items-center justify-center md:justify-start gap-space-8 py-space-6 px-space-12 rounded bg-surface-container-lowest shadow-xs">
-              <span className="material-symbols-outlined text-secondary text-lg">
-                near_me
-              </span>
-              <span className="font-label-bold text-label-bold text-on-surface">
-                Local Products
-              </span>
-            </div>
-            <div className="flex items-center justify-center md:justify-start gap-space-8 py-space-6 px-space-12 rounded bg-surface-container-lowest shadow-xs">
-              <span className="material-symbols-outlined text-on-tertiary-container text-lg material-symbols-fill">
-                star
-              </span>
-              <span className="font-label-bold text-label-bold text-on-surface">
-                Ratings &amp; Reviews
-              </span>
-            </div>
+            {(valueProps || []).map((prop, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-center md:justify-start gap-space-8 py-space-6 px-space-12 rounded bg-surface-container-lowest shadow-xs"
+              >
+                <span
+                  className={`material-symbols-outlined text-lg ${
+                    prop.isRating
+                      ? "text-on-tertiary-container material-symbols-fill"
+                      : "text-secondary"
+                  }`}
+                >
+                  {prop.icon}
+                </span>
+                <span className="font-label-bold text-label-bold text-on-surface">
+                  {prop.label}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -591,120 +463,58 @@ export const HomePage = ({
       {/* 3. BUY / RENT / SELL SECTION ("SIMPLE ECONOMICS - One place. Three ways.") */}
       <section className="w-full bg-surface py-space-32 lg:py-space-48">
         <div className="max-w-[1240px] mx-auto px-gutter-mobile lg:px-gutter-desktop">
-          <div className="text-center max-w-xl mx-auto mb-space-32">
-            <span className="font-badge text-badge tracking-wider text-secondary uppercase bg-secondary-container/20 px-space-12 py-space-4 rounded-full inline-block">
-              SIMPLE ECONOMICS
-            </span>
-            <h2 className="font-headline-lg text-headline-lg lg:text-display-lg text-on-surface mt-space-8 font-bold">
-              One place. Three ways.
+          <div className="text-center max-w-xl mx-auto mb-space-24">
+            <h2 className="font-headline-lg text-headline-lg lg:text-display-lg text-on-surface font-bold">
+              Buy • Rent • Sell
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-space-20">
-            {/* BUY CARD */}
-            <div
-              onClick={() => onNavigate("search", { type: "buy" })}
-              className="group bg-surface-container-lowest p-space-24 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between cursor-pointer border border-outline-variant/30"
-            >
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="px-space-12 py-space-4 rounded bg-primary text-on-primary font-badge text-badge tracking-wider">
-                    BUY
-                  </span>
-                  <span className="material-symbols-outlined text-on-surface-variant text-2xl">
-                    shopping_cart
-                  </span>
+            {(featurePillars || []).map((pillar, idx) => (
+              <div
+                key={idx}
+                onClick={() => {
+                  if (pillar.action === "list-item") onOpenAddProduct();
+                  else onNavigate("search", { type: pillar.type });
+                }}
+                className="group bg-surface-container-lowest p-space-24 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between cursor-pointer border border-outline-variant/30"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className={`px-space-12 py-space-4 rounded font-badge text-badge tracking-wider ${pillar.badgeColor}`}>
+                      {pillar.badge}
+                    </span>
+                    <span className="material-symbols-outlined text-on-surface-variant text-2xl">
+                      {pillar.icon}
+                    </span>
+                  </div>
+                  <h3 className="font-headline-md text-headline-md text-on-surface mt-space-16 font-bold">
+                    {pillar.title}
+                  </h3>
+                  <p className="font-body-md text-body-md text-on-surface-variant mt-space-8">
+                    {pillar.description}
+                  </p>
                 </div>
-                <h3 className="font-headline-md text-headline-md text-on-surface mt-space-16 font-bold">
-                  Find it. Buy it.
-                </h3>
-                <p className="font-body-md text-body-md text-on-surface-variant mt-space-8">
-                  Own pre-loved items at up to 70% off retail pricing, inspected
-                  locally before payment.
-                </p>
-              </div>
-              <div className="mt-space-24 pt-space-16">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onNavigate("search", { type: "buy" });
-                  }}
-                  className="inline-flex items-center justify-center w-full bg-primary text-on-primary font-label-bold text-label-bold py-space-12 rounded-lg hover:bg-on-surface-variant transition-colors cursor-pointer"
-                >
-                  Shop Now →
-                </button>
-              </div>
-            </div>
-
-            {/* RENT CARD */}
-            <div
-              onClick={() => onNavigate("search", { type: "rent" })}
-              className="group bg-surface-container-lowest p-space-24 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between cursor-pointer border border-outline-variant/30"
-            >
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="px-space-12 py-space-4 rounded bg-secondary text-on-secondary font-badge text-badge tracking-wider">
-                    RENT
-                  </span>
-                  <span className="material-symbols-outlined text-secondary text-2xl">
-                    event_repeat
-                  </span>
+                <div className="mt-space-24 pt-space-16">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (pillar.action === "list-item") onOpenAddProduct();
+                      else onNavigate("search", { type: pillar.type });
+                    }}
+                    className={`inline-flex items-center justify-center w-full font-label-bold text-label-bold py-space-12 rounded-lg transition-colors cursor-pointer ${
+                      pillar.type === "buy"
+                        ? "bg-primary text-on-primary hover:bg-on-surface-variant"
+                        : pillar.type === "rent"
+                        ? "bg-secondary text-on-secondary hover:bg-on-secondary-container"
+                        : "bg-surface-container-high text-on-surface hover:bg-surface-container-highest"
+                    }`}
+                  >
+                    {pillar.buttonText}
+                  </button>
                 </div>
-                <h3 className="font-headline-md text-headline-md text-on-surface mt-space-16 font-bold">
-                  Use it. Return it.
-                </h3>
-                <p className="font-body-md text-body-md text-on-surface-variant mt-space-8">
-                  Rent appliances, cameras, tools, and event gear by the day
-                  without ownership stress.
-                </p>
               </div>
-              <div className="mt-space-24 pt-space-16">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onNavigate("search", { type: "rent" });
-                  }}
-                  className="inline-flex items-center justify-center w-full bg-secondary text-on-secondary font-label-bold text-label-bold py-space-12 rounded-lg hover:bg-on-secondary-container transition-colors cursor-pointer"
-                >
-                  Rent Now 📅
-                </button>
-              </div>
-            </div>
-
-            {/* SELL CARD */}
-            <div
-              onClick={onOpenAddProduct}
-              className="group bg-surface-container-lowest p-space-24 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between cursor-pointer border border-outline-variant/30"
-            >
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="px-space-12 py-space-4 rounded bg-surface-container-high text-on-surface font-badge text-badge tracking-wider">
-                    SELL
-                  </span>
-                  <span className="material-symbols-outlined text-on-surface-variant text-2xl">
-                    storefront
-                  </span>
-                </div>
-                <h3 className="font-headline-md text-headline-md text-on-surface mt-space-16 font-bold">
-                  Don't use it? Sell it.
-                </h3>
-                <p className="font-body-md text-body-md text-on-surface-variant mt-space-8">
-                  List unneeded household electronics, bikes, and gadgets in 60
-                  seconds with instant buyer chat.
-                </p>
-              </div>
-              <div className="mt-space-24 pt-space-16">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenAddProduct();
-                  }}
-                  className="inline-flex items-center justify-center w-full bg-surface-container-high text-on-surface font-label-bold text-label-bold py-space-12 rounded-lg hover:bg-surface-container-highest transition-colors cursor-pointer"
-                >
-                  List Item ⊕
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -717,11 +527,19 @@ export const HomePage = ({
         <div className="max-w-[1240px] mx-auto px-gutter-mobile lg:px-gutter-desktop">
           <div className="flex items-end justify-between mb-space-24 flex-wrap gap-4">
             <div>
-              <h2 className="font-headline-lg text-headline-lg text-on-surface font-bold">
-                Around you
-              </h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-headline-lg text-headline-lg text-on-surface font-bold">
+                  Around you
+                </h2>
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-secondary bg-secondary-container/40 px-2.5 py-0.5 rounded-full">
+                  <span className="material-symbols-outlined text-[13px]">location_on</span>
+                  <span>{currentLocation || "Gandhinagar"}</span>
+                </span>
+              </div>
               <p className="font-body-md text-body-md text-on-surface-variant mt-space-2">
-                Find useful products nearby.
+                {displayedProducts.length > 0
+                  ? `Verified products available near ${currentLocation || "you"} (${displayedProducts.length} items).`
+                  : `No items listed directly in ${currentLocation || "your area"}. Showing nearest locations.`}
               </p>
             </div>
 
@@ -758,6 +576,29 @@ export const HomePage = ({
               </button>
             </div>
           </div>
+
+          {apiProducts.length === 0 && nearbySuggestions.length > 0 && nearestLocations.length > 0 && (
+            <div className="bg-surface-container-lowest p-3 sm:p-4 rounded-xl border border-secondary/30 mb-space-16 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-fade-in shadow-xs">
+              <div className="flex items-center gap-2 text-xs text-on-surface">
+                <span className="material-symbols-outlined text-secondary text-[20px] shrink-0">near_me</span>
+                <span><strong>No products directly in {currentLocation}.</strong> Available in nearest hubs:</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {nearestLocations.map((loc, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      updateLocation(loc.location);
+                      onToast && onToast(`Location updated to ${loc.location}`);
+                    }}
+                    className="text-[11px] bg-surface-container hover:bg-secondary hover:text-on-secondary px-2.5 py-1 rounded-md font-bold text-on-surface transition-colors cursor-pointer"
+                  >
+                    📍 {loc.location} ({loc.distance_km} km)
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-16">
             {displayedProducts.map((product) => {
@@ -823,14 +664,14 @@ export const HomePage = ({
 
                   <div className="p-space-12 pt-0">
                     <div
-                      className={`inline-flex items-center gap-space-4 px-space-8 py-space-2 rounded font-badge text-badge w-full justify-center ${product.bottomChip.classes}`}
+                      className={`inline-flex items-center gap-space-4 px-space-8 py-space-2 rounded font-badge text-badge w-full justify-center ${product.bottomChip?.classes || "bg-surface-container text-on-surface"}`}
                     >
                       <span
-                        className={`material-symbols-outlined text-sm ${product.bottomChip.type === "rating" ? "text-on-tertiary-container material-symbols-fill" : "text-secondary"}`}
+                        className={`material-symbols-outlined text-sm ${product.bottomChip?.type === "rating" ? "text-on-tertiary-container material-symbols-fill" : "text-secondary"}`}
                       >
-                        {product.bottomChip.icon}
+                        {product.bottomChip?.icon || "verified"}
                       </span>
-                      {product.bottomChip.text}
+                      {product.bottomChip?.text || "Verified"}
                     </div>
                   </div>
                 </div>
@@ -843,70 +684,34 @@ export const HomePage = ({
       {/* 5. HOW IT WORKS SECTION ("Simple as 1–2–3") */}
       <section className="w-full bg-surface-container-lowest py-space-32 lg:py-space-48 rounded-2xl mb-space-24 border border-outline-variant/30">
         <div className="max-w-[1240px] mx-auto px-gutter-mobile lg:px-gutter-desktop">
-          <div className="text-center max-w-lg mx-auto mb-space-32">
+          <div className="text-center max-w-lg mx-auto mb-space-24">
             <h2 className="font-display-lg text-display-lg-mobile lg:text-display-lg text-on-surface font-bold">
-              Simple as 1–2–3
+              How It Works
             </h2>
-            <p className="font-body-md text-body-md text-on-surface-variant mt-space-4">
-              Neighborhood commerce with zero ambiguity.
-            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-space-24">
-            {/* Step 1 */}
-            <div className="p-space-24 rounded-xl bg-surface-container-low flex flex-col items-start border border-outline-variant/20">
-              <div className="w-12 h-12 rounded-lg bg-surface-container-lowest shadow-sm flex items-center justify-center text-primary mb-space-16">
-                <span className="material-symbols-outlined text-2xl">
-                  search
+            {(howItWorks || []).map((step, idx) => (
+              <div
+                key={idx}
+                className="p-space-24 rounded-xl bg-surface-container-low flex flex-col items-start border border-outline-variant/20"
+              >
+                <div className={`w-12 h-12 rounded-lg bg-surface-container-lowest shadow-sm flex items-center justify-center ${step.iconColor || "text-primary"} mb-space-16`}>
+                  <span className="material-symbols-outlined text-2xl">
+                    {step.icon}
+                  </span>
+                </div>
+                <span className="font-badge text-badge text-secondary uppercase tracking-wider font-bold">
+                  {step.step}
                 </span>
+                <h3 className="font-headline-md text-headline-md text-on-surface mt-space-4 font-bold">
+                  {step.title}
+                </h3>
+                <p className="font-body-md text-body-md text-on-surface-variant mt-space-8">
+                  {step.description}
+                </p>
               </div>
-              <span className="font-badge text-badge text-secondary uppercase tracking-wider font-bold">
-                Step 01
-              </span>
-              <h3 className="font-headline-md text-headline-md text-on-surface mt-space-4 font-bold">
-                Find
-              </h3>
-              <p className="font-body-md text-body-md text-on-surface-variant mt-space-8">
-                Browse verified tools, bikes, electronics in your neighborhood.
-              </p>
-            </div>
-
-            {/* Step 2 */}
-            <div className="p-space-24 rounded-xl bg-surface-container-low flex flex-col items-start border border-outline-variant/20">
-              <div className="w-12 h-12 rounded-lg bg-surface-container-lowest shadow-sm flex items-center justify-center text-secondary mb-space-16">
-                <span className="material-symbols-outlined text-2xl">
-                  handshake
-                </span>
-              </div>
-              <span className="font-badge text-badge text-secondary uppercase tracking-wider font-bold">
-                Step 02
-              </span>
-              <h3 className="font-headline-md text-headline-md text-on-surface mt-space-4 font-bold">
-                Buy or Rent
-              </h3>
-              <p className="font-body-md text-body-md text-on-surface-variant mt-space-8">
-                Chat instantly with owner. Lock deposits securely in escrow
-                before meeting.
-              </p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="p-space-24 rounded-xl bg-surface-container-low flex flex-col items-start border border-outline-variant/20">
-              <div className="w-12 h-12 rounded-lg bg-surface-container-lowest shadow-sm flex items-center justify-center text-on-tertiary-container mb-space-16">
-                <span className="material-symbols-outlined text-2xl">
-                  sentiment_satisfied
-                </span>
-              </div>
-              <span className="font-badge text-badge text-secondary uppercase tracking-wider font-bold">
-                Step 03
-              </span>
-              <h3 className="font-headline-md text-headline-md text-on-surface mt-space-4 font-bold">
-                Enjoy
-              </h3>
-              <p className="font-body-md text-body-md text-on-surface-variant mt-space-8">
-                Pick up nearby, inspect condition, use it, and save money.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -926,24 +731,23 @@ export const HomePage = ({
             Verified users. Clear ratings. Safer transactions.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-space-12 mt-space-24">
-            <div className="flex items-center gap-space-6 px-space-16 py-space-8 rounded-full bg-surface-container-lowest shadow-sm text-on-surface font-label-bold text-label-bold border border-outline-variant/30">
-              <span className="material-symbols-outlined text-secondary text-base">
-                check_circle
-              </span>
-              Aadhaar &amp; Phone Verified
-            </div>
-            <div className="flex items-center gap-space-6 px-space-16 py-space-8 rounded-full bg-surface-container-lowest shadow-sm text-on-surface font-label-bold text-label-bold border border-outline-variant/30">
-              <span className="material-symbols-outlined text-on-tertiary-container text-base material-symbols-fill">
-                star
-              </span>
-              Transparent 5-Star Ratings
-            </div>
-            <div className="flex items-center gap-space-6 px-space-16 py-space-8 rounded-full bg-surface-container-lowest shadow-sm text-on-surface font-label-bold text-label-bold border border-outline-variant/30">
-              <span className="material-symbols-outlined text-secondary text-base">
-                lock
-              </span>
-              Escrow-Protected Deposits
-            </div>
+            {(trustBadges || []).map((badge, idx) => (
+              <div
+                key={idx}
+                className="flex items-center gap-space-6 px-space-16 py-space-8 rounded-full bg-surface-container-lowest shadow-sm text-on-surface font-label-bold text-label-bold border border-outline-variant/30"
+              >
+                <span
+                  className={`material-symbols-outlined text-base ${
+                    badge.isRating
+                      ? "text-on-tertiary-container material-symbols-fill"
+                      : "text-secondary"
+                  }`}
+                >
+                  {badge.icon}
+                </span>
+                {badge.label}
+              </div>
+            ))}
           </div>
         </div>
       </section>

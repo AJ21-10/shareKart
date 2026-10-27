@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useMarketplace } from '../context/MarketplaceContext';
 
 export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onOpenAadhaarVerification, onToast }) => {
   const { user } = useAuth();
   const { addToCart } = useCart();
+  const { getProductById } = useMarketplace();
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
@@ -31,18 +33,29 @@ export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onOp
     setLoading(true);
     try {
       const res = await api.getProductById(productId);
-      if (res.success) {
+      if (res.success && res.product) {
         setProduct(res.product);
         setReviews(res.reviews || []);
         if (res.product.transaction_type === 'buy') {
           setPricingMode('buy');
         }
+        setLoading(false);
+        return;
       }
     } catch (err) {
-      console.error('Failed to load product details', err);
-    } finally {
-      setLoading(false);
+      console.warn('API getProductById error, fallback to context', err);
     }
+
+    // Context fallback for custom or newly added products in initialData
+    const fallbackProduct = getProductById(productId);
+    if (fallbackProduct) {
+      setProduct(fallbackProduct);
+      setReviews(fallbackProduct.reviews || []);
+      if (fallbackProduct.transaction_type === 'buy') {
+        setPricingMode('buy');
+      }
+    }
+    setLoading(false);
   };
 
   const calculateCost = async () => {
@@ -211,29 +224,16 @@ export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onOp
           </div>
 
           {/* Physical Inspection Pass Guarantee Banner */}
-          <div className="bg-secondary-fixed/30 p-3 sm:p-space-12 rounded-xl flex items-center justify-between gap-3 sm:gap-space-12 border border-secondary-fixed shadow-xs">
-            <div className="flex items-center gap-3 sm:gap-space-12">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-secondary text-on-secondary flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[20px] sm:text-[22px]">verified_user</span>
-              </div>
-              <div>
-                <p className="font-label-bold text-xs sm:text-label-bold text-on-surface flex items-center gap-1">
-                  <span>Physical Inspection Passed</span>
-                  <span className="material-symbols-outlined text-[14px] sm:text-[16px] text-secondary">check_circle</span>
-                </p>
-                <p className="text-xs sm:text-body-sm text-on-surface-variant">
-                  Inspected by Sharekart Field Partner · {product.serial_number} Verified
-                </p>
-              </div>
+          <div className="bg-secondary-fixed/20 p-2.5 sm:p-3 rounded-xl flex items-center justify-between gap-3 border border-secondary-fixed/50">
+            <div className="flex items-center gap-2.5">
+              <span className="material-symbols-outlined text-[20px] text-secondary">verified_user</span>
+              <p className="font-label-bold text-xs sm:text-body-sm text-on-surface">
+                Physical Inspection Passed · Score {product.inspection_score || 98}/100
+              </p>
             </div>
-            <div className="hidden sm:flex flex-col items-end shrink-0">
-              <span className="text-badge font-badge text-secondary bg-surface-container-lowest px-space-8 py-space-2 rounded-full shadow-xs">
-                Score {product.inspection_score}/100
-              </span>
-              <span className="text-badge font-badge text-on-surface-variant mt-0.5">
-                Tested {product.inspection_tested_date || '18 Mar 2025'}
-              </span>
-            </div>
+            <span className="text-[11px] text-on-surface-variant font-medium shrink-0">
+              {product.serial_number || 'Verified'}
+            </span>
           </div>
 
           {/* Condition Assessment Report */}
@@ -281,11 +281,21 @@ export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onOp
             {/* What's Inside Kit Box */}
             {Array.isArray(product.kit_items) && product.kit_items.length > 0 && (
               <div className="flex flex-col gap-2 sm:gap-space-8 pt-2 sm:pt-space-12 bg-surface-container-low/50 p-2.5 sm:p-space-12 rounded-lg">
-                <h3 className="font-label-bold text-xs sm:text-label-bold text-on-surface">What's Inside the Kit Box:</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-label-bold text-xs sm:text-label-bold text-on-surface">What's Inside the Kit Box:</h3>
+                  {(product.has_invoice || product.kit_items?.some(i => i.toLowerCase().includes('bill') || i.toLowerCase().includes('invoice'))) && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-secondary bg-secondary-container/40 px-2 py-0.5 rounded-full">
+                      <span className="material-symbols-outlined text-[13px]">receipt_long</span>
+                      Original GST Bill Included
+                    </span>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-space-16 gap-y-1 sm:gap-y-space-6 text-xs sm:text-body-sm font-body-sm text-on-surface">
                   {product.kit_items.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-secondary text-[15px] sm:text-[16px]">check</span>
+                      <span className="material-symbols-outlined text-secondary text-[15px] sm:text-[16px]">
+                        {item.toLowerCase().includes('invoice') || item.toLowerCase().includes('bill') ? 'receipt_long' : 'check'}
+                      </span>
                       <span>{item}</span>
                     </div>
                   ))}
@@ -340,10 +350,10 @@ export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onOp
             )}
 
             {activeTab === 'tips' && (
-              <div className="flex flex-col gap-2 sm:gap-space-8 text-xs sm:text-body-sm font-body-sm">
-                <p className="font-label-bold text-on-surface">Note from {product.seller_name} (Owner):</p>
-                <p className="text-on-surface-variant leading-relaxed">
-                  "I keep all my equipment thoroughly sanitized, calibrated, and charged before any handover. Feel free to reach out via Sharekart chat if you need tips or accessories. Please return the items in the protective carry pouch provided."
+              <div className="flex flex-col gap-1 text-xs sm:text-body-sm font-body-sm">
+                <p className="font-label-bold text-on-surface">Owner Note ({product.seller_name}):</p>
+                <p className="text-on-surface-variant">
+                  Clean, fully functional, and tested. Please return in the included protective case.
                 </p>
               </div>
             )}
@@ -540,7 +550,7 @@ export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onOp
                     </span>
                   </div>
                   <p className="text-[10px] sm:text-badge font-badge text-on-surface-variant">
-                    *(Includes ₹{product.security_deposit?.toLocaleString('en-IN')} deposit refunded instantly to your UPI)
+                    Deposit refunded directly to your UPI upon safe return.
                   </p>
                 </div>
 

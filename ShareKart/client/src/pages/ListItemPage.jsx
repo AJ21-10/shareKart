@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useMarketplace } from '../context/MarketplaceContext';
 import { getCurrentLocation } from '../services/locationService';
 
 export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast }) => {
   const { user, currentLocation, updateLocation } = useAuth();
+  const { addProduct } = useMarketplace();
 
   // Form State
   const [title, setTitle] = useState('Bosch Rotary Hammer Drill 800W with 5 drill bits & carry case');
@@ -19,16 +21,15 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
   const [weeklyDiscount, setWeeklyDiscount] = useState(true);
   const [salePrice, setSalePrice] = useState(3800);
 
-  // Condition & Accessories
+  // Condition, Bill Checkbox & Custom Accessories
   const [condition, setCondition] = useState('gently_used');
-  const [accessories, setAccessories] = useState({
-    case: true,
-    bits: true,
-    cable: true,
-    invoice: true,
-    gauge: false,
-    safety: false
-  });
+  const [hasInvoice, setHasInvoice] = useState(true);
+  const [customAccessories, setCustomAccessories] = useState([
+    'Original Hard Carry Case',
+    '5x Masonry Drill Bits',
+    'Power Cord (3 Meter)'
+  ]);
+  const [accessoryInput, setAccessoryInput] = useState('');
 
   // Photos
   const [photos, setPhotos] = useState([
@@ -100,8 +101,23 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
   const takeHomePerDay = Math.round(numDaily * 0.95);
   const paybackDays = Math.max(1, Math.round((Number(salePrice) || 6400) / (numDaily || 350)));
 
-  const handleToggleAccessory = (key) => {
-    setAccessories((prev) => ({ ...prev, [key]: !prev[key] }));
+  const handleAddAccessory = () => {
+    const trimmed = accessoryInput.trim();
+    if (!trimmed) return;
+    if (!customAccessories.includes(trimmed)) {
+      setCustomAccessories((prev) => [...prev, trimmed]);
+    }
+    setAccessoryInput('');
+  };
+
+  const handleRemoveAccessory = (indexToRemove) => {
+    setCustomAccessories((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handleAddSuggestion = (text) => {
+    if (!customAccessories.includes(text)) {
+      setCustomAccessories((prev) => [...prev, text]);
+    }
   };
 
   const handleRemovePhoto = (id) => {
@@ -151,12 +167,17 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
     setIsSubmitting(true);
     try {
       const transaction_type = modeRent && modeSell ? 'both' : modeRent ? 'rent' : 'buy';
+      const kitItems = [
+        ...(hasInvoice ? ['Original GST Tax Invoice / Bill'] : []),
+        ...customAccessories
+      ];
+
       const payload = {
         title,
         category_id: category,
         subcategory: brand || 'Hardware',
         brand,
-        description: `${title}. Condition: ${condition.replace('_', ' ')}. Includes verified accessories. Verified neighborhood host.`,
+        description: `${title}. Condition: ${condition.replace('_', ' ')}. Includes: ${kitItems.join(', ')}. Verified neighborhood host.`,
         transaction_type,
         rent_price_daily: Number(dailyRate) || 0,
         rent_price_weekly: Math.round(Number(dailyRate) * 6 * 0.85) || 0,
@@ -165,12 +186,22 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
         condition_tag: condition === 'like_new' ? 'Like New' : condition === 'gently_used' ? 'Gently Used' : 'Fair / Working',
         condition_score: condition === 'like_new' ? '9.5 / 10' : condition === 'gently_used' ? '8.5 / 10' : '7 / 10',
         location_name: pickupLocation,
-        kit_items: Object.keys(accessories).filter((k) => accessories[k]),
+        has_invoice: hasInvoice,
+        kit_items: kitItems,
         images: photos.map((p) => p.url)
       };
 
       const res = await api.createProduct(payload);
       if (res.success || res.productId) {
+        if (addProduct) {
+          addProduct({
+            ...payload,
+            id: res.productId || Date.now(),
+            seller_name: user?.name || 'Local Host',
+            seller_rating: '5.0',
+            seller_is_verified: true
+          });
+        }
         onToast && onToast('Item successfully published to Gandhinagar neighborhood!');
         onNavigate('search');
       } else {
@@ -195,7 +226,7 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
   const handleSaveDraft = () => {
     try {
       localStorage.setItem('sharekart_listing_draft', JSON.stringify({
-        title, category, brand, dailyRate, securityDeposit, salePrice, condition
+        title, category, brand, dailyRate, securityDeposit, salePrice, condition, hasInvoice, customAccessories
       }));
       onToast && onToast('Draft saved successfully to your device!');
     } catch {
@@ -228,10 +259,10 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-16 pb-space-8">
           <div>
             <h1 className="font-display-lg text-2xl sm:text-display-lg text-on-surface tracking-tight font-bold">
-              List an Item to Rent or Sell in Your Neighborhood
+              List an Item
             </h1>
-            <p className="text-body-lg text-xs sm:text-body-lg text-on-surface-variant mt-space-4">
-              Earn up to ₹15,000/month from idle gadgets, electronics, and tools. All transactions protected by RBI-compliant security escrow.
+            <p className="text-body-md text-xs sm:text-body-md text-on-surface-variant mt-1">
+              Rent out or sell items to verified neighbors nearby with escrow safety.
             </p>
           </div>
           {user?.is_aadhaar_verified ? (
@@ -252,26 +283,21 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
               className="flex items-center gap-space-8 self-start md:self-auto bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-space-12 py-space-6 rounded-lg cursor-pointer transition text-amber-700 shadow-xs"
             >
               <span className="material-symbols-outlined text-[20px] text-amber-600">warning</span>
-              <span className="text-body-sm font-label-bold">Aadhaar Unverified · Click to Verify</span>
+              <span className="text-body-sm font-label-bold">Verify Aadhaar to Publish</span>
             </button>
           )}
         </div>
       </div>
 
       {!user?.is_aadhaar_verified && (
-        <div className="w-full mb-space-16 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-start gap-2.5">
-            <span className="material-symbols-outlined text-[22px] text-amber-600 shrink-0 mt-0.5">
+        <div className="w-full mb-space-16 p-3 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-[20px] text-amber-600 shrink-0">
               shield_person
             </span>
-            <div>
-              <p className="font-bold text-slate-900 text-sm">
-                Aadhaar Verification Required to Publish Listings
-              </p>
-              <p className="text-on-surface-variant mt-0.5">
-                ShareKart requires 100% Aadhaar-verified hosts to prevent fraud and protect peer equipment. Please complete quick UIDAI verification before publishing.
-              </p>
-            </div>
+            <p className="font-bold text-slate-900 text-sm">
+              Aadhaar verification is required before publishing listings.
+            </p>
           </div>
           <button
             type="button"
@@ -282,10 +308,10 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                 onNavigate('aadhaar-ekyc');
               }
             }}
-            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 rounded-lg shrink-0 flex items-center justify-center gap-1.5 transition cursor-pointer"
+            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3.5 py-1.5 rounded-lg shrink-0 flex items-center justify-center gap-1.5 transition cursor-pointer text-xs"
           >
-            <span className="material-symbols-outlined text-[16px]">verified</span>
-            <span>Verify Aadhaar Now</span>
+            <span className="material-symbols-outlined text-[15px]">verified</span>
+            <span>Verify Aadhaar</span>
           </button>
         </div>
       )}
@@ -295,14 +321,13 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
         {/* Left Column: Form Progression (8 cols) */}
         <div className="lg:col-span-8 flex flex-col gap-space-24">
           {/* Step 1: Basic Information */}
-          <section className="bg-surface-container-lowest rounded-xl p-4 sm:p-space-24 shadow-sm border border-outline-variant/40 flex flex-col gap-space-20">
+          <section className="bg-surface-container-lowest rounded-xl p-4 sm:p-space-24 shadow-sm border border-outline-variant/40 flex flex-col gap-space-16">
             <div className="flex items-center gap-space-12">
               <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-label-bold text-label-bold">
                 1
               </div>
               <div>
-                <h2 className="font-headline-md text-headline-md text-on-surface font-semibold">Basic Information</h2>
-                <p className="text-body-sm font-body-sm text-on-surface-variant">What item are you offering to your local community?</p>
+                <h2 className="font-headline-md text-headline-md text-on-surface font-semibold">Basic Details</h2>
               </div>
             </div>
 
@@ -319,9 +344,6 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                   placeholder="e.g. Sony Alpha a6400 Mirrorless Camera with 18-135mm Lens"
                   className="w-full bg-surface-container-low px-space-16 py-space-12 rounded-lg text-body-md font-body-md text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-secondary transition-all border border-transparent focus:border-secondary"
                 />
-                <span className="text-badge font-badge text-on-surface-variant">
-                  Be descriptive: Include brand, power output, model year, or essential bundled extras.
-                </span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-space-16">
@@ -367,10 +389,10 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
 
               {/* Listing Modes Toggle */}
               <div className="flex flex-col gap-space-8 mt-space-4">
-                <span className="font-label-bold text-label-bold text-on-surface">Listing Mode (Select one or both)</span>
+                <span className="font-label-bold text-label-bold text-on-surface">Listing Mode</span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-12">
                   <label
-                    className={`relative flex items-start gap-space-12 p-space-16 rounded-lg cursor-pointer transition-all border ${
+                    className={`relative flex items-center gap-space-12 p-3.5 rounded-lg cursor-pointer transition-all border ${
                       modeRent ? 'bg-secondary/5 border-secondary shadow-xs' : 'bg-surface-container-low border-transparent'
                     }`}
                   >
@@ -378,23 +400,18 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                       type="checkbox"
                       checked={modeRent}
                       onChange={(e) => setModeRent(e.target.checked)}
-                      className="mt-1 w-4 h-4 rounded text-secondary accent-secondary cursor-pointer"
+                      className="w-4 h-4 rounded text-secondary accent-secondary cursor-pointer"
                     />
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-space-6">
-                        <span className="font-label-bold text-label-bold text-on-surface">Rent Out</span>
-                        <span className="bg-secondary text-on-secondary text-badge font-badge px-space-6 py-0.5 rounded">
-                          High Demand
-                        </span>
-                      </div>
-                      <span className="text-body-sm font-body-sm text-on-surface-variant mt-space-2">
-                        Keep ownership. Earn recurring daily, weekend, or monthly income.
+                    <div className="flex items-center justify-between w-full">
+                      <span className="font-label-bold text-label-bold text-on-surface">Rent Out</span>
+                      <span className="bg-secondary text-on-secondary text-badge font-badge px-2 py-0.5 rounded">
+                        Daily / Weekly
                       </span>
                     </div>
                   </label>
 
                   <label
-                    className={`relative flex items-start gap-space-12 p-space-16 rounded-lg cursor-pointer transition-all border ${
+                    className={`relative flex items-center gap-space-12 p-3.5 rounded-lg cursor-pointer transition-all border ${
                       modeSell ? 'bg-primary/5 border-primary shadow-xs' : 'bg-surface-container-low border-transparent'
                     }`}
                   >
@@ -402,17 +419,12 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                       type="checkbox"
                       checked={modeSell}
                       onChange={(e) => setModeSell(e.target.checked)}
-                      className="mt-1 w-4 h-4 rounded text-primary accent-primary cursor-pointer"
+                      className="w-4 h-4 rounded text-primary accent-primary cursor-pointer"
                     />
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-space-6">
-                        <span className="font-label-bold text-label-bold text-on-surface">Sell Permanently</span>
-                        <span className="bg-surface-container-high text-on-surface text-badge font-badge px-space-6 py-0.5 rounded">
-                          One-time cash
-                        </span>
-                      </div>
-                      <span className="text-body-sm font-body-sm text-on-surface-variant mt-space-2">
-                        Transfer ownership completely to a verified neighborhood buyer.
+                    <div className="flex items-center justify-between w-full">
+                      <span className="font-label-bold text-label-bold text-on-surface">Sell Outright</span>
+                      <span className="bg-surface-container-high text-on-surface text-badge font-badge px-2 py-0.5 rounded">
+                        One-Time
                       </span>
                     </div>
                   </label>
@@ -422,20 +434,19 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
           </section>
 
           {/* Step 2: Pricing & Escrow Security Deposit */}
-          <section className="bg-surface-container-lowest rounded-xl p-4 sm:p-space-24 shadow-sm border border-outline-variant/40 flex flex-col gap-space-20">
+          <section className="bg-surface-container-lowest rounded-xl p-4 sm:p-space-24 shadow-sm border border-outline-variant/40 flex flex-col gap-space-16">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-space-12">
                 <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-label-bold text-label-bold">
                   2
                 </div>
                 <div>
-                  <h2 className="font-headline-md text-headline-md text-on-surface font-semibold">Pricing & Escrow Protection</h2>
-                  <p className="text-body-sm font-body-sm text-on-surface-variant">Set rates and zero-risk refundable security safeguards.</p>
+                  <h2 className="font-headline-md text-headline-md text-on-surface font-semibold">Pricing</h2>
                 </div>
               </div>
               <div className="hidden sm:flex items-center gap-space-4 bg-tertiary-fixed text-on-tertiary-fixed px-space-8 py-space-4 rounded">
                 <span className="material-symbols-outlined text-[16px]">lock</span>
-                <span className="text-badge font-badge">Escrow Insured</span>
+                <span className="text-badge font-badge">Escrow Protected</span>
               </div>
             </div>
 
@@ -445,9 +456,8 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                 <div className="flex items-center justify-between">
                   <span className="font-label-bold text-label-bold text-secondary flex items-center gap-space-6">
                     <span className="material-symbols-outlined text-[18px]">currency_rupee</span>
-                    Rental Pricing Structure
+                    Rental Rates
                   </span>
-                  <span className="text-badge font-badge text-on-surface-variant">Market Avg: ₹350 - ₹450 / day</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-space-16">
@@ -466,9 +476,6 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                       />
                       <span className="absolute right-4 text-body-sm font-body-sm text-on-surface-variant">/ day</span>
                     </div>
-                    <span className="text-badge font-badge text-secondary mt-space-2">
-                      Tip: Listings under ₹400 rent out 3.2x faster in Gandhinagar.
-                    </span>
                   </div>
 
                   <div className="flex flex-col gap-space-4">
@@ -485,14 +492,11 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                         className="w-full bg-surface-container-lowest pl-10 pr-space-16 py-space-12 rounded-lg font-price-md text-price-md text-on-surface focus:outline-none focus:ring-1 focus:ring-secondary transition-all"
                       />
                     </div>
-                    <span className="text-badge font-badge text-on-surface-variant mt-space-2">
-                      Held securely in RBI Escrow until renter returns item undamaged.
-                    </span>
                   </div>
                 </div>
 
                 {/* Weekly Discount Checkbox */}
-                <label className="flex items-center gap-space-8 cursor-pointer mt-space-4">
+                <label className="flex items-center gap-space-8 cursor-pointer mt-1">
                   <input
                     type="checkbox"
                     checked={weeklyDiscount}
@@ -500,7 +504,7 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                     className="w-4 h-4 rounded text-secondary accent-secondary cursor-pointer"
                   />
                   <span className="text-body-sm font-body-sm text-on-surface">
-                    Apply <strong>15% automatic discount</strong> for weekly bookings (7+ days). Helps get high-value long stays.
+                    Apply <strong>15% discount</strong> for weekly rentals (7+ days)
                   </span>
                 </label>
               </div>
@@ -508,40 +512,25 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
 
             {/* Outright Sale Price */}
             {modeSell && (
-              <div className="flex flex-col gap-space-8 p-space-16 bg-surface-container-low rounded-lg">
-                <div className="flex items-center justify-between">
-                  <span className="font-label-bold text-label-bold text-on-surface flex items-center gap-space-6">
-                    <span className="material-symbols-outlined text-[18px]">sell</span>
-                    Permanent Sale Pricing
-                  </span>
-                  <span className="text-badge font-badge text-on-surface-variant">Original MRP: ~₹6,400</span>
-                </div>
+              <div className="flex flex-col gap-space-12 p-space-16 bg-surface-container-low rounded-lg">
+                <span className="font-label-bold text-label-bold text-on-surface flex items-center gap-space-6">
+                  <span className="material-symbols-outlined text-[18px]">sell</span>
+                  Sale Price
+                </span>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-space-16">
-                  <div className="flex flex-col gap-space-4">
-                    <label className="font-label-bold text-label-bold text-on-surface" htmlFor="sale-price">
-                      Direct Purchase Price <span className="text-error">*</span>
-                    </label>
-                    <div className="relative flex items-center">
-                      <span className="absolute left-4 font-headline-sm text-headline-sm text-on-surface">₹</span>
-                      <input
-                        id="sale-price"
-                        type="number"
-                        value={salePrice}
-                        onChange={(e) => setSalePrice(e.target.value)}
-                        className="w-full bg-surface-container-lowest pl-10 pr-space-16 py-space-12 rounded-lg font-price-md text-price-md text-on-surface focus:outline-none focus:ring-1 focus:ring-secondary transition-all"
-                      />
-                    </div>
-                    <span className="text-badge font-badge text-on-surface-variant mt-space-2">
-                      Includes immediate instant UPI settlement upon delivery verification.
-                    </span>
-                  </div>
-
-                  <div className="flex items-center bg-surface-container-lowest p-space-12 rounded-lg gap-space-8">
-                    <span className="material-symbols-outlined text-[24px] text-secondary">handshake</span>
-                    <p className="text-body-sm font-body-sm text-on-surface-variant leading-tight">
-                      Buyers can choose between renting or buying directly from your single listing page.
-                    </p>
+                <div className="flex flex-col gap-space-4 max-w-md">
+                  <label className="font-label-bold text-label-bold text-on-surface" htmlFor="sale-price">
+                    Direct Purchase Price <span className="text-error">*</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-4 font-headline-sm text-headline-sm text-on-surface">₹</span>
+                    <input
+                      id="sale-price"
+                      type="number"
+                      value={salePrice}
+                      onChange={(e) => setSalePrice(e.target.value)}
+                      className="w-full bg-surface-container-lowest pl-10 pr-space-16 py-space-12 rounded-lg font-price-md text-price-md text-on-surface focus:outline-none focus:ring-1 focus:ring-secondary transition-all"
+                    />
                   </div>
                 </div>
               </div>
@@ -556,129 +545,203 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
               </div>
               <div>
                 <h2 className="font-headline-md text-headline-md text-on-surface font-semibold">Condition & Accessories</h2>
-                <p className="text-body-sm font-body-sm text-on-surface-variant">Accurate details prevent disputes and ensure high lender ratings.</p>
               </div>
             </div>
 
             <div className="flex flex-col gap-space-16">
               <div className="flex flex-col gap-space-8">
                 <span className="font-label-bold text-label-bold text-on-surface">
-                  Physical & Functional Condition <span className="text-error">*</span>
+                  Condition <span className="text-error">*</span>
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-12">
                   <button
                     type="button"
                     onClick={() => setCondition('like_new')}
-                    className={`flex flex-col items-start p-space-12 rounded-lg text-left transition-all border cursor-pointer ${
+                    className={`flex items-center justify-between p-space-12 rounded-lg text-left transition-all border cursor-pointer ${
                       condition === 'like_new'
                         ? 'bg-primary-container text-on-primary border-primary-container shadow-sm'
                         : 'bg-surface-container-low text-on-surface border-transparent hover:bg-surface-container-high'
                     }`}
                   >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="font-label-bold text-label-bold">Like New</span>
-                      <span className={`text-badge font-badge ${condition === 'like_new' ? 'text-secondary-fixed' : 'text-secondary'}`}>
-                        95-100%
-                      </span>
-                    </div>
-                    <span className={`text-body-sm font-body-sm mt-space-4 ${condition === 'like_new' ? 'text-surface-container-high' : 'text-on-surface-variant'}`}>
-                      Zero scratches, barely used, in pristine condition.
+                    <span className="font-label-bold text-label-bold">Like New</span>
+                    <span className={`text-badge font-badge ${condition === 'like_new' ? 'text-secondary-fixed' : 'text-secondary'}`}>
+                      95-100%
                     </span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setCondition('gently_used')}
-                    className={`flex flex-col items-start p-space-12 rounded-lg text-left transition-all border cursor-pointer ${
+                    className={`flex items-center justify-between p-space-12 rounded-lg text-left transition-all border cursor-pointer ${
                       condition === 'gently_used'
                         ? 'bg-primary-container text-on-primary border-primary-container shadow-sm'
                         : 'bg-surface-container-low text-on-surface border-transparent hover:bg-surface-container-high'
                     }`}
                   >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="font-label-bold text-label-bold">Gently Used</span>
-                      <span className={`text-badge font-badge ${condition === 'gently_used' ? 'text-secondary-fixed' : 'text-secondary'}`}>
-                        80-94%
-                      </span>
-                    </div>
-                    <span className={`text-body-sm font-body-sm mt-space-4 ${condition === 'gently_used' ? 'text-surface-container-high' : 'text-on-surface-variant'}`}>
-                      Minor cosmetic scuffs, 100% fully functional.
+                    <span className="font-label-bold text-label-bold">Gently Used</span>
+                    <span className={`text-badge font-badge ${condition === 'gently_used' ? 'text-secondary-fixed' : 'text-secondary'}`}>
+                      80-94%
                     </span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setCondition('fair')}
-                    className={`flex flex-col items-start p-space-12 rounded-lg text-left transition-all border cursor-pointer ${
+                    className={`flex items-center justify-between p-space-12 rounded-lg text-left transition-all border cursor-pointer ${
                       condition === 'fair'
                         ? 'bg-primary-container text-on-primary border-primary-container shadow-sm'
                         : 'bg-surface-container-low text-on-surface border-transparent hover:bg-surface-container-high'
                     }`}
                   >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="font-label-bold text-label-bold">Fair / Working</span>
-                      <span className={`text-badge font-badge ${condition === 'fair' ? 'text-secondary-fixed' : 'text-on-surface-variant'}`}>
-                        60-79%
-                      </span>
-                    </div>
-                    <span className={`text-body-sm font-body-sm mt-space-4 ${condition === 'fair' ? 'text-surface-container-high' : 'text-on-surface-variant'}`}>
-                      Visible signs of wear, fully tested motor/body.
+                    <span className="font-label-bold text-label-bold">Fair / Working</span>
+                    <span className={`text-badge font-badge ${condition === 'fair' ? 'text-secondary-fixed' : 'text-on-surface-variant'}`}>
+                      60-79%
                     </span>
                   </button>
                 </div>
               </div>
 
-              {/* Accessories Checklist */}
-              <div className="flex flex-col gap-space-8">
-                <span className="font-label-bold text-label-bold text-on-surface">Included Accessories & Extras</span>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-space-12">
-                  {[
-                    { key: 'case', label: 'Original Hard Carry Case' },
-                    { key: 'bits', label: '5x Masonry Drill Bits' },
-                    { key: 'cable', label: 'Power Cord (3 Meter)' },
-                    { key: 'invoice', label: 'Original GST Tax Invoice' },
-                    { key: 'gauge', label: 'Auxiliary Depth Gauge' },
-                    { key: 'safety', label: 'Safety Goggles / Gloves' }
-                  ].map((acc) => (
-                    <label
-                      key={acc.key}
-                      className="flex items-center gap-space-8 p-space-12 bg-surface-container-low rounded-lg cursor-pointer hover:bg-surface-container transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={accessories[acc.key]}
-                        onChange={() => handleToggleAccessory(acc.key)}
-                        className="w-4 h-4 rounded text-primary accent-primary cursor-pointer"
-                      />
-                      <span className="text-body-sm font-body-sm text-on-surface">{acc.label}</span>
-                    </label>
-                  ))}
-                </div>
+              {/* 1. Original Tax Invoice / Bill Checkbox (Single dedicated checkbox) */}
+              <div className="p-space-16 bg-surface-container-low rounded-xl border border-outline-variant/40">
+                <label className="flex items-center gap-space-12 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={hasInvoice}
+                    onChange={(e) => setHasInvoice(e.target.checked)}
+                    className="w-5 h-5 rounded text-primary accent-primary cursor-pointer shrink-0"
+                  />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-label-bold text-label-bold text-on-surface">
+                      Original GST Tax Invoice / Bill Available
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-secondary bg-secondary-container/30 px-2 py-0.5 rounded-full">
+                      <span className="material-symbols-outlined text-[13px]">receipt_long</span>
+                      Bill Check
+                    </span>
+                  </div>
+                </label>
               </div>
 
-              {/* Live Video Verification Promise */}
-              <div className="flex items-start gap-space-12 p-space-16 bg-secondary-container/20 rounded-lg border border-secondary-container/40">
-                <span className="material-symbols-outlined text-[24px] text-secondary shrink-0">videocam</span>
-                <div className="flex flex-col">
-                  <span className="font-label-bold text-label-bold text-on-surface">Sharekart Handover Guarantee</span>
-                  <p className="text-body-sm font-body-sm text-on-surface-variant mt-0.5">
-                    You will perform a quick 30-second power test in front of the renter/buyer during local pickup before releasing the one-time pickup OTP.
-                  </p>
+              {/* 2. Included Accessories & Extras (Custom Text Input & Dynamic Items) */}
+              <div className="flex flex-col gap-space-12">
+                <div className="flex items-center justify-between">
+                  <span className="font-label-bold text-label-bold text-on-surface">
+                    Included Accessories &amp; Extras
+                  </span>
+                  <span className="text-body-sm text-on-surface-variant font-medium">
+                    {customAccessories.length} {customAccessories.length === 1 ? 'item' : 'items'}
+                  </span>
+                </div>
+
+                {/* Text input with Add button */}
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
+                      add_circle
+                    </span>
+                    <input
+                      type="text"
+                      value={accessoryInput}
+                      onChange={(e) => setAccessoryInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddAccessory();
+                        }
+                      }}
+                      placeholder="Type accessory (e.g. Carry Bag, Charger, Batteries)..."
+                      className="w-full pl-10 pr-4 py-2.5 bg-surface-container-low rounded-lg border border-outline-variant text-body-sm text-on-surface placeholder:text-outline focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddAccessory}
+                    disabled={!accessoryInput.trim()}
+                    className="px-space-16 py-2.5 bg-primary text-on-primary rounded-lg font-label-bold text-body-sm hover:bg-on-surface-variant transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5 shrink-0"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">add</span>
+                    <span>Add</span>
+                  </button>
+                </div>
+
+                {/* Display added accessories tags */}
+                {customAccessories.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 p-3 bg-surface-container-low/60 rounded-xl border border-outline-variant/30 min-h-[50px] items-center">
+                    {customAccessories.map((item, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg bg-surface-container-lowest text-on-surface border border-outline-variant/60 shadow-2xs text-body-sm font-medium animate-scale-up"
+                      >
+                        <span className="material-symbols-outlined text-secondary text-[16px]">
+                          check_circle
+                        </span>
+                        <span>{item}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAccessory(idx)}
+                          className="w-5 h-5 rounded-full hover:bg-surface-container-high flex items-center justify-center text-outline hover:text-error transition-colors cursor-pointer ml-1"
+                          title="Remove item"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">close</span>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-body-sm text-outline italic px-3 py-2 bg-surface-container-low/40 rounded-lg border border-dashed border-outline-variant/50">
+                    No extra accessories added yet.
+                  </div>
+                )}
+
+                {/* Quick 1-Click Suggestion Chips */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                    Quick Suggestions
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      'Original Box',
+                      'Power Adapter & Cable',
+                      'Protective Carry Case',
+                      'Warranty Card',
+                      'Rechargeable Battery',
+                      'Mounting Clamp'
+                    ].map((suggestion) => {
+                      const isAdded = customAccessories.includes(suggestion);
+                      return (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => isAdded ? null : handleAddSuggestion(suggestion)}
+                          disabled={isAdded}
+                          className={`text-xs px-2.5 py-1 rounded-md border transition-all flex items-center gap-1 cursor-pointer ${
+                            isAdded
+                              ? 'bg-secondary-container/20 text-on-surface-variant border-secondary/30 opacity-60 cursor-default'
+                              : 'bg-surface-container-lowest text-on-surface border-outline-variant hover:border-secondary hover:text-secondary'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[13px]">
+                            {isAdded ? 'done' : 'add'}
+                          </span>
+                          <span>{suggestion}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Step 4: Upload Photos & Proof */}
-          <section className="bg-surface-container-lowest rounded-xl p-4 sm:p-space-24 shadow-sm border border-outline-variant/40 flex flex-col gap-space-20">
+          {/* Step 4: Upload Photos */}
+          <section className="bg-surface-container-lowest rounded-xl p-4 sm:p-space-24 shadow-sm border border-outline-variant/40 flex flex-col gap-space-16">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-space-12">
                 <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-label-bold text-label-bold">
                   4
                 </div>
                 <div>
-                  <h2 className="font-headline-md text-headline-md text-on-surface font-semibold">Photos & Proof of Ownership</h2>
-                  <p className="text-body-sm font-body-sm text-on-surface-variant">Upload 3 to 8 clear photos of your actual item from different angles.</p>
+                  <h2 className="font-headline-md text-headline-md text-on-surface font-semibold">Photos</h2>
                 </div>
               </div>
               <span className="text-badge font-badge bg-surface-container-high text-on-surface px-space-8 py-space-4 rounded">
@@ -693,7 +756,7 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                     <img src={p.url} alt="Listing upload" className="w-full h-full object-cover" />
                     {idx === 0 && (
                       <span className="absolute top-2 left-2 bg-primary text-on-primary text-badge font-badge px-space-6 py-0.5 rounded">
-                        Cover Photo
+                        Cover
                       </span>
                     )}
                     {p.label && idx !== 0 && (
@@ -714,9 +777,8 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
 
                 {/* Upload Slot Button */}
                 <label className="flex flex-col items-center justify-center aspect-video sm:aspect-square bg-surface-container-low hover:bg-surface-container rounded-lg cursor-pointer transition-colors text-center p-space-12 border-2 border-dashed border-outline-variant">
-                  <span className="material-symbols-outlined text-[28px] text-on-surface-variant">add_photo_alternate</span>
-                  <span className="text-label-bold font-label-bold text-on-surface mt-space-4">+ Add More</span>
-                  <span className="text-badge font-badge text-on-surface-variant mt-0.5">JPEG or PNG, &lt; 10MB</span>
+                  <span className="material-symbols-outlined text-[26px] text-on-surface-variant">add_photo_alternate</span>
+                  <span className="text-label-bold font-label-bold text-on-surface mt-1">+ Add Photos</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -726,44 +788,34 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                   />
                 </label>
               </div>
-
-              {/* Trust Callout for Photos */}
-              <div className="flex items-center gap-space-8 bg-surface-container-low p-space-12 rounded-lg">
-                <span className="material-symbols-outlined text-[20px] text-on-tertiary-container">lightbulb</span>
-                <p className="text-body-sm font-body-sm text-on-surface leading-snug">
-                  <strong>Lender Tip:</strong> Items showing clear photos of serial numbers and the purchase invoice receive <strong>3x more bookings</strong> and skip manual review delays.
-                </p>
-              </div>
             </div>
           </section>
 
           {/* Step 5: Pickup Location & Handover Modes */}
-          <section className="bg-surface-container-lowest rounded-xl p-4 sm:p-space-24 shadow-sm border border-outline-variant/40 flex flex-col gap-space-20">
+          <section className="bg-surface-container-lowest rounded-xl p-4 sm:p-space-24 shadow-sm border border-outline-variant/40 flex flex-col gap-space-16">
             <div className="flex items-center gap-space-12">
               <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-label-bold text-label-bold">
                 5
               </div>
               <div>
-                <h2 className="font-headline-md text-headline-md text-on-surface font-semibold">Neighborhood & Pickup Options</h2>
-                <p className="text-body-sm font-body-sm text-on-surface-variant">Your privacy is protected. Exact address is only shared upon confirmed payment.</p>
+                <h2 className="font-headline-md text-headline-md text-on-surface font-semibold">Pickup Location</h2>
               </div>
             </div>
 
             <div className="flex flex-col gap-space-16">
               <div className="flex flex-col gap-space-4">
                 <div className="flex items-center justify-between">
-                  <label className="font-label-bold text-label-bold text-on-surface">Pickup Micro-Market / Area <span className="text-error">*</span></label>
+                  <label className="font-label-bold text-label-bold text-on-surface">Pickup Area / Landmark <span className="text-error">*</span></label>
                   <button
                     type="button"
                     onClick={() => handleDetectLocation(false)}
                     disabled={detectingLocation}
                     className="inline-flex items-center gap-1 text-xs font-label-bold text-secondary hover:underline cursor-pointer disabled:opacity-50"
-                    title="Request GPS permission and use your current live location"
                   >
                     <span className={`material-symbols-outlined text-[15px] ${detectingLocation ? 'animate-spin' : ''}`}>
                       {detectingLocation ? 'progress_activity' : 'my_location'}
                     </span>
-                    <span>{detectingLocation ? 'Detecting GPS...' : 'Use Current Location'}</span>
+                    <span>{detectingLocation ? 'Detecting...' : 'Use Current GPS'}</span>
                   </button>
                 </div>
                 <div className="flex items-center bg-surface-container-low px-space-16 py-space-12 rounded-lg gap-space-8 border border-outline-variant/40">
@@ -776,77 +828,52 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                       setLocationStatus('');
                       setLocationMsg('');
                     }}
-                    placeholder="e.g. Infocity, Gandhinagar 382007"
+                    placeholder="e.g. Infocity, Gandhinagar"
                     className="font-body-md text-body-md text-on-surface flex-1 bg-transparent border-none focus:outline-none"
                   />
                   <span className={`text-badge font-badge ${locationStatus === 'success' ? 'text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded' : 'text-secondary'}`}>
                     {locationStatus === 'success' ? 'GPS Verified' : 'Aadhaar Linked'}
                   </span>
                 </div>
-                {locationMsg ? (
+                {locationMsg && (
                   <div className={`text-xs flex items-center gap-1.5 ${
                     locationStatus === 'success'
                       ? 'text-emerald-600 dark:text-emerald-400 font-medium'
-                      : locationStatus === 'denied'
-                      ? 'text-amber-600 dark:text-amber-400'
-                      : detectingLocation
-                      ? 'text-secondary'
                       : 'text-on-surface-variant'
                   }`}>
-                    <span className={`material-symbols-outlined text-[14px] shrink-0 ${detectingLocation ? 'animate-spin' : ''}`}>
-                      {detectingLocation ? 'progress_activity' : locationStatus === 'success' ? 'check_circle' : locationStatus === 'denied' ? 'lock' : 'info'}
-                    </span>
+                    <span className="material-symbols-outlined text-[14px]">info</span>
                     <span>{locationMsg}</span>
                   </div>
-                ) : (
-                  <span className="text-badge font-badge text-on-surface-variant">
-                    Derived from your live GPS coordinates. Buyers within 5-10 km see this listing first.
-                  </span>
                 )}
-              </div>
-
-              {/* Map Preview with Privacy Mask */}
-              <div className="relative w-full h-44 rounded-lg overflow-hidden bg-surface-container-high border border-outline-variant/40">
-                <div className="w-full h-full bg-[radial-gradient(#bec6e0_1px,transparent_1px)] [background-size:16px_16px] flex items-center justify-center">
-                  <div className="w-32 h-32 rounded-full bg-secondary/10 border-2 border-secondary border-dashed animate-pulse flex items-center justify-center">
-                    <span className="material-symbols-outlined text-secondary text-[32px]">share_location</span>
-                  </div>
-                </div>
-                <div className="absolute inset-0 bg-primary/20 backdrop-blur-[2px] flex items-center justify-center p-space-16">
-                  <div className="bg-surface-container-lowest/95 px-space-16 py-space-8 rounded-full shadow-md flex items-center gap-space-8">
-                    <span className="material-symbols-outlined text-[18px] text-secondary">shield</span>
-                    <span className="text-body-sm font-label-bold text-on-surface">Privacy Zone: 500m radius visible publicly</span>
-                  </div>
-                </div>
               </div>
 
               {/* Handover Modes */}
               <div className="flex flex-col gap-space-8">
-                <span className="font-label-bold text-label-bold text-on-surface">Delivery & Collection Preferences</span>
+                <span className="font-label-bold text-label-bold text-on-surface">Handover Preferences</span>
                 <div className="flex flex-col sm:flex-row gap-space-12">
-                  <label className="flex-1 flex items-start gap-space-8 p-space-12 bg-surface-container-low rounded-lg cursor-pointer hover:bg-surface-container transition-colors border border-outline-variant/30">
+                  <label className="flex-1 flex items-center gap-space-8 p-3 bg-surface-container-low rounded-lg cursor-pointer hover:bg-surface-container transition-colors border border-outline-variant/30">
                     <input
                       type="checkbox"
                       checked={selfPickup}
                       onChange={(e) => setSelfPickup(e.target.checked)}
-                      className="mt-1 w-4 h-4 rounded text-secondary accent-secondary cursor-pointer"
+                      className="w-4 h-4 rounded text-secondary accent-secondary cursor-pointer"
                     />
                     <div>
-                      <span className="font-label-bold text-label-bold text-on-surface block">Self-Pickup by Renter</span>
-                      <span className="text-body-sm font-body-sm text-on-surface-variant">Renter visits your apartment gate or local landmark.</span>
+                      <span className="font-label-bold text-body-sm text-on-surface block">Self-Pickup</span>
+                      <span className="text-xs text-on-surface-variant">Renter picks up at your location</span>
                     </div>
                   </label>
 
-                  <label className="flex-1 flex items-start gap-space-8 p-space-12 bg-surface-container-low rounded-lg cursor-pointer hover:bg-surface-container transition-colors border border-outline-variant/30">
+                  <label className="flex-1 flex items-center gap-space-8 p-3 bg-surface-container-low rounded-lg cursor-pointer hover:bg-surface-container transition-colors border border-outline-variant/30">
                     <input
                       type="checkbox"
                       checked={doorstepDelivery}
                       onChange={(e) => setDoorstepDelivery(e.target.checked)}
-                      className="mt-1 w-4 h-4 rounded text-secondary accent-secondary cursor-pointer"
+                      className="w-4 h-4 rounded text-secondary accent-secondary cursor-pointer"
                     />
                     <div>
-                      <span className="font-label-bold text-label-bold text-on-surface block">Local Doorstep Drop-off</span>
-                      <span className="text-body-sm font-body-sm text-on-surface-variant">Deliver within 5 km for a fixed +₹50 delivery charge.</span>
+                      <span className="font-label-bold text-body-sm text-on-surface block">Doorstep Drop-off (+₹50)</span>
+                      <span className="text-xs text-on-surface-variant">Deliver locally within 5 km</span>
                     </div>
                   </label>
                 </div>
@@ -855,23 +882,18 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
           </section>
 
           {/* Step 6: Legal & Escrow Consent */}
-          <section className="bg-surface-container-lowest rounded-xl p-4 sm:p-space-24 shadow-sm border border-outline-variant/40 flex flex-col gap-space-16">
-            <label className="flex items-start gap-space-12 cursor-pointer">
+          <section className="bg-surface-container-lowest rounded-xl p-4 sm:p-space-20 shadow-sm border border-outline-variant/40 flex flex-col gap-space-12">
+            <label className="flex items-center gap-space-12 cursor-pointer">
               <input
                 type="checkbox"
                 id="legal-consent"
                 checked={legalConsent}
                 onChange={(e) => setLegalConsent(e.target.checked)}
-                className="mt-1 w-5 h-5 rounded text-secondary accent-secondary cursor-pointer"
+                className="w-5 h-5 rounded text-secondary accent-secondary cursor-pointer shrink-0"
               />
-              <div className="flex flex-col">
-                <span className="font-label-bold text-label-bold text-on-surface">
-                  I accept the Sharekart Standard Neighborhood Agreement
-                </span>
-                <p className="text-body-sm font-body-sm text-on-surface-variant mt-space-2 leading-relaxed">
-                  I certify that this equipment belongs to me, is in safe working condition, and is legally compliant under the Indian Contract Act (1872). I understand that tenant security deposits are held in a scheduled bank escrow account and will only be disbursed or released per verified pickup & return OTP receipts.
-                </p>
-              </div>
+              <span className="text-body-sm font-label-bold text-on-surface">
+                I confirm this item is in working order and accept the ShareKart community terms &amp; escrow policy.
+              </span>
             </label>
           </section>
 
@@ -901,27 +923,24 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                 <span className="material-symbols-outlined text-[20px]">
                   {isSubmitting ? 'sync' : 'rocket_launch'}
                 </span>
-                <span>{isSubmitting ? 'Publishing...' : 'Publish to Gandhinagar'}</span>
+                <span>{isSubmitting ? 'Publishing...' : 'Publish Listing'}</span>
               </button>
             </div>
           </div>
         </div>
 
         {/* Right Column: Live Income Simulator & Host Safety Shield (4 cols) */}
-        <div className="lg:col-span-4 flex flex-col gap-space-24 lg:sticky lg:top-32">
+        <div className="lg:col-span-4 flex flex-col gap-space-20 lg:sticky lg:top-32">
           {/* Potential Earnings Card */}
-          <div className="bg-surface-container-lowest rounded-xl p-4 sm:p-space-24 shadow-sm border border-outline-variant/40 flex flex-col gap-space-20">
+          <div className="bg-surface-container-lowest rounded-xl p-4 sm:p-space-20 shadow-sm border border-outline-variant/40 flex flex-col gap-space-16">
             <div className="flex items-center justify-between pb-space-8 border-b border-outline-variant/40">
               <div className="flex items-center gap-space-6">
                 <span className="material-symbols-outlined text-[20px] text-secondary">trending_up</span>
                 <span className="font-label-bold text-label-bold text-on-surface">Earnings Simulator</span>
               </div>
-              <span className="text-badge font-badge bg-secondary-container text-on-secondary-container px-space-6 py-0.5 rounded">
-                Sector 21 Hot Item
-              </span>
             </div>
 
-            <div className="bg-surface-container-low p-space-16 rounded-lg flex flex-col gap-space-8">
+            <div className="bg-surface-container-low p-space-12 rounded-lg flex flex-col gap-1">
               <span className="text-body-sm font-body-sm text-on-surface-variant">Estimated Monthly Payout</span>
               <div className="flex items-baseline gap-space-4">
                 <span className="font-price-lg text-price-lg text-secondary font-bold">
@@ -929,77 +948,46 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                 </span>
                 <span className="text-badge font-badge text-on-surface-variant">/ month</span>
               </div>
-              <span className="text-badge font-badge text-on-surface-variant">
-                Assumes 12 to 16 rental days @ ₹{dailyRate}/day
-              </span>
             </div>
 
             {/* Mini Visual Chart (Earnings Breakdown) */}
-            <div className="flex flex-col gap-space-8">
+            <div className="flex flex-col gap-space-6">
               <div className="flex justify-between text-body-sm font-body-sm">
-                <span className="text-on-surface">Your Take-home</span>
-                <span className="font-label-bold text-on-surface">95% (₹{takeHomePerDay} / day)</span>
+                <span className="text-on-surface">Take-home (95%)</span>
+                <span className="font-label-bold text-on-surface">₹{takeHomePerDay} / day</span>
               </div>
-              <div className="w-full bg-surface-container h-2.5 rounded-full overflow-hidden flex">
+              <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden flex">
                 <div className="bg-secondary h-full" style={{ width: '95%' }}></div>
                 <div className="bg-primary h-full" style={{ width: '5%' }}></div>
               </div>
               <div className="flex justify-between text-badge font-badge text-on-surface-variant">
-                <span>Direct to your UPI</span>
-                <span>5% Sharekart platform fee</span>
-              </div>
-            </div>
-
-            {/* ROI Indicator */}
-            <div className="p-space-12 bg-surface-container-low rounded-lg flex items-center gap-space-12">
-              <span className="material-symbols-outlined text-[28px] text-secondary shrink-0">savings</span>
-              <div className="flex flex-col">
-                <span className="font-label-bold text-label-bold text-on-surface">100% Asset Payback</span>
-                <span className="text-body-sm font-body-sm text-on-surface-variant">
-                  This item recovers its full ₹{(Number(salePrice) || 6400).toLocaleString('en-IN')} MRP after just {paybackDays} days of neighborhood rentals.
-                </span>
+                <span>Direct to UPI</span>
+                <span>5% platform fee</span>
               </div>
             </div>
           </div>
 
           {/* Trust Pillars Card */}
-          <div className="bg-primary-container text-on-primary rounded-xl p-4 sm:p-space-24 shadow-md flex flex-col gap-space-20">
+          <div className="bg-primary-container text-on-primary rounded-xl p-4 sm:p-space-20 shadow-md flex flex-col gap-space-16">
             <div className="flex items-center gap-space-8">
-              <span className="material-symbols-outlined text-[24px] text-secondary-fixed">gshield</span>
-              <h3 className="font-headline-sm text-headline-sm text-on-primary font-bold">Host Protection Shield</h3>
+              <span className="material-symbols-outlined text-[22px] text-secondary-fixed">gshield</span>
+              <h3 className="font-headline-sm text-headline-sm text-on-primary font-bold">Host Protection</h3>
             </div>
 
-            <div className="flex flex-col gap-space-16">
-              <div className="flex items-start gap-space-12">
-                <span className="material-symbols-outlined text-[20px] text-secondary-fixed shrink-0 mt-0.5">fingerprint</span>
-                <div className="flex flex-col">
-                  <span className="font-label-bold text-label-bold text-on-primary">100% Aadhaar Verified Renters</span>
-                  <p className="text-body-sm font-body-sm text-surface-container-high mt-0.5">
-                    Every borrower verifies identity through UIDAI OTP e-sign before requesting an item.
-                  </p>
-                </div>
+            <div className="flex flex-col gap-space-12 text-body-sm">
+              <div className="flex items-center gap-space-8">
+                <span className="material-symbols-outlined text-[18px] text-secondary-fixed shrink-0">verified</span>
+                <span>Aadhaar Verified Renters</span>
               </div>
 
-              <div className="flex items-start gap-space-12">
-                <span className="material-symbols-outlined text-[20px] text-secondary-fixed shrink-0 mt-0.5">account_balance_wallet</span>
-                <div className="flex flex-col">
-                  <span className="font-label-bold text-label-bold text-on-primary">
-                    ₹{Number(securityDeposit || 1500).toLocaleString('en-IN')} Upfront Escrow Deposit
-                  </span>
-                  <p className="text-body-sm font-body-sm text-surface-container-high mt-0.5">
-                    Stored in a safe custody account. Any broken accessories or loss is automatically compensated to you.
-                  </p>
-                </div>
+              <div className="flex items-center gap-space-8">
+                <span className="material-symbols-outlined text-[18px] text-secondary-fixed shrink-0">account_balance_wallet</span>
+                <span>₹{Number(securityDeposit || 1500).toLocaleString('en-IN')} Escrow Security Deposit</span>
               </div>
 
-              <div className="flex items-start gap-space-12">
-                <span className="material-symbols-outlined text-[20px] text-secondary-fixed shrink-0 mt-0.5">bolt</span>
-                <div className="flex flex-col">
-                  <span className="font-label-bold text-label-bold text-on-primary">Instant UPI Payout</span>
-                  <p className="text-body-sm font-body-sm text-surface-container-high mt-0.5">
-                    Funds land in your PhonePe, Google Pay, or bank account within 2 hours of pickup confirmation.
-                  </p>
-                </div>
+              <div className="flex items-center gap-space-8">
+                <span className="material-symbols-outlined text-[18px] text-secondary-fixed shrink-0">bolt</span>
+                <span>Instant UPI Payout on return</span>
               </div>
             </div>
           </div>
@@ -1050,6 +1038,46 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
             </div>
 
             <p className="text-body-sm text-on-surface-variant">Location: {pickupLocation}</p>
+
+            {/* Bill & Included Accessories Preview */}
+            <div className="flex flex-col gap-2.5 p-3 bg-surface-container-low rounded-xl border border-outline-variant/40">
+              <div className="flex items-center justify-between text-body-sm">
+                <span className="font-label-bold text-on-surface">Invoice / Bill:</span>
+                {hasInvoice ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-secondary bg-secondary-container/30 px-2 py-0.5 rounded-full">
+                    <span className="material-symbols-outlined text-[13px]">receipt_long</span>
+                    Original GST Bill Included
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-outline italic">No Bill attached</span>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5 pt-1 border-t border-outline-variant/30">
+                <div className="flex items-center justify-between text-body-sm">
+                  <span className="font-label-bold text-on-surface">
+                    Included Accessories &amp; Extras:
+                  </span>
+                  <span className="text-badge text-on-surface-variant">
+                    {customAccessories.length} {customAccessories.length === 1 ? 'item' : 'items'}
+                  </span>
+                </div>
+                {customAccessories.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 mt-0.5">
+                    {customAccessories.map((acc, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1 text-badge bg-surface-container-lowest px-2 py-1 rounded-md border border-outline-variant/50 text-on-surface"
+                      >
+                        <span className="material-symbols-outlined text-secondary text-[12px]">check</span>
+                        {acc}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-body-sm text-outline italic">No extra accessories added</span>
+                )}
+              </div>
+            </div>
 
             <div className="flex gap-space-12 pt-space-8 border-t border-outline-variant/40">
               <button

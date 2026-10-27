@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
+import { MarketplaceProvider } from "./context/MarketplaceContext";
 import { Navbar } from "./components/Navbar";
 import { AuthModal } from "./components/AuthModal";
 import { CartDrawer } from "./components/CartDrawer";
@@ -102,7 +103,12 @@ const resolveRoute = () => {
   if (path === "checkout") {
     return { page: "checkout", params: {} };
   }
-  if (path === "search") {
+  if (
+    path === "search" ||
+    path === "products" ||
+    path === "all-products" ||
+    path === "categories"
+  ) {
     return { page: "search", params: {} };
   }
   if (path === "product") {
@@ -223,6 +229,13 @@ export function AppContent() {
     ) {
       targetPage = "dashboard";
       targetParams = { ...targetParams, tab: page };
+    } else if (
+      page === "products" ||
+      page === "all-products" ||
+      page === "categories"
+    ) {
+      targetPage = "search";
+      targetParams = { category: "all", ...targetParams };
     }
 
     // Intercept listing attempt if user is unverified
@@ -298,6 +311,7 @@ export function AppContent() {
       {/* Top Fixed Navbar */}
       <Navbar
         activePage={currentPage}
+        pageParams={pageParams}
         onNavigate={navigateTo}
         onOpenAuth={() => navigateTo("login")}
         onOpenEditProfile={() => navigateTo("profile")}
@@ -500,12 +514,68 @@ export function AppContent() {
   );
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Sharekart UI Error caught by boundary:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-16 h-16 rounded-full bg-error-container/30 flex items-center justify-center text-error mb-4">
+            <span className="material-symbols-outlined text-4xl">error</span>
+          </div>
+          <h1 className="text-xl font-bold text-on-surface mb-2">Something went wrong</h1>
+          <p className="text-sm text-on-surface-variant max-w-md mb-6">
+            An unexpected display error occurred. Please reload to refresh the marketplace.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.href = "/";
+              }}
+              className="px-6 py-2.5 bg-primary text-on-primary font-bold rounded-lg shadow-sm hover:opacity-90 cursor-pointer"
+            >
+              Go to Home
+            </button>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.reload();
+              }}
+              className="px-6 py-2.5 bg-surface-container text-on-surface font-bold rounded-lg border border-outline-variant hover:bg-surface-container-high cursor-pointer"
+            >
+              Reload
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   return (
-    <AuthProvider>
-      <CartProvider>
-        <AppContent />
-      </CartProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <MarketplaceProvider>
+          <CartProvider>
+            <AppContent />
+          </CartProvider>
+        </MarketplaceProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

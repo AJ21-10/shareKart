@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useMarketplace } from '../context/MarketplaceContext';
 import { ProductCard } from '../components/ProductCard';
 
 export const SearchPage = ({ initialFilters = {}, onNavigate, onToast }) => {
-  const { currentLocation } = useAuth();
+  const { currentLocation, updateLocation } = useAuth();
+  const { filterProducts, categories: contextCategories } = useMarketplace();
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [nearbySuggestions, setNearbySuggestions] = useState([]);
+  const [nearestLocations, setNearestLocations] = useState([]);
+  const [categories, setCategories] = useState(contextCategories || []);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -14,7 +18,7 @@ export const SearchPage = ({ initialFilters = {}, onNavigate, onToast }) => {
   // Filters state
   const [searchQuery, setSearchQuery] = useState(initialFilters.q || '');
   const [selectedCategory, setSelectedCategory] = useState(initialFilters.category || 'all');
-  const [transactionType, setTransactionType] = useState('all'); // 'all', 'rent', 'buy'
+  const [transactionType, setTransactionType] = useState(initialFilters.type || 'all'); // 'all', 'rent', 'buy'
   const [maxDistance, setMaxDistance] = useState(10);
   const [verifiedOnly, setVerifiedOnly] = useState(true);
   const [sortBy, setSortBy] = useState('distance');
@@ -22,13 +26,20 @@ export const SearchPage = ({ initialFilters = {}, onNavigate, onToast }) => {
   const [maxPrice, setMaxPrice] = useState('');
 
   useEffect(() => {
-    if (initialFilters.category) setSelectedCategory(initialFilters.category);
-    if (initialFilters.q) setSearchQuery(initialFilters.q);
+    setSelectedCategory(initialFilters.category || 'all');
+    setSearchQuery(initialFilters.q || '');
+    if (initialFilters.type) {
+      setTransactionType(initialFilters.type);
+    } else if (!initialFilters.category || initialFilters.category === 'all') {
+      setTransactionType('all');
+      setMinPrice('');
+      setMaxPrice('');
+    }
   }, [initialFilters]);
 
   useEffect(() => {
     fetchResults();
-  }, [searchQuery, selectedCategory, transactionType, maxDistance, verifiedOnly, sortBy]);
+  }, [searchQuery, selectedCategory, transactionType, maxDistance, verifiedOnly, sortBy, currentLocation]);
 
   const fetchResults = async () => {
     setLoading(true);
@@ -41,18 +52,49 @@ export const SearchPage = ({ initialFilters = {}, onNavigate, onToast }) => {
         verifiedOnly,
         sort: sortBy,
         minPrice,
-        maxPrice
+        maxPrice,
+        location: currentLocation || ''
       };
 
       const [prodRes, catRes] = await Promise.all([
-        api.getProducts(params),
-        api.getCategories()
+        api.getProducts(params).catch(e => ({ success: false })),
+        api.getCategories().catch(e => ({ success: false }))
       ]);
 
-      if (prodRes.success) setProducts(prodRes.products);
-      if (catRes.success) setCategories(catRes.categories);
+      if (prodRes?.success && prodRes.products) {
+        setProducts(prodRes.products || []);
+        setNearbySuggestions(prodRes.nearbySuggestions || []);
+        setNearestLocations(prodRes.nearestLocations || []);
+      } else {
+        const local = filterProducts({
+          category: selectedCategory,
+          type: transactionType,
+          query: searchQuery,
+          location: currentLocation,
+          maxDistance,
+          verifiedOnly
+        });
+        setProducts(local.products);
+        setNearbySuggestions(local.nearbySuggestions);
+      }
+
+      if (catRes?.success && catRes.categories?.length > 0) {
+        setCategories(catRes.categories);
+      } else if (contextCategories?.length > 0) {
+        setCategories(contextCategories);
+      }
     } catch (err) {
-      console.error('Search query failed', err);
+      console.error('Search query failed, using marketplace fallback', err);
+      const local = filterProducts({
+        category: selectedCategory,
+        type: transactionType,
+        query: searchQuery,
+        location: currentLocation,
+        maxDistance,
+        verifiedOnly
+      });
+      setProducts(local.products);
+      setNearbySuggestions(local.nearbySuggestions);
     } finally {
       setLoading(false);
     }
@@ -180,7 +222,11 @@ export const SearchPage = ({ initialFilters = {}, onNavigate, onToast }) => {
               near <strong className="text-on-surface">{currentLocation || 'Gandhinagar'} ({maxDistance} km)</strong>
             </span>
             <span className="bg-secondary-container text-on-secondary-container px-2 sm:px-space-8 py-0.5 rounded text-[10px] sm:text-badge font-badge uppercase tracking-wider">
-              {products.length} Listings
+              {products.length > 0
+                ? `${products.length} in area`
+                : nearbySuggestions.length > 0
+                ? `${nearbySuggestions.length} in nearby hubs`
+                : '0 Listings'}
             </span>
           </div>
           <p className="text-xs sm:text-body-sm text-on-surface-variant flex items-center gap-1">
@@ -336,17 +382,173 @@ export const SearchPage = ({ initialFilters = {}, onNavigate, onToast }) => {
               Loading listings...
             </div>
           ) : products.length === 0 ? (
-            <div className="p-12 sm:p-16 text-center text-on-surface-variant bg-surface-container-lowest rounded-xl border border-outline-variant flex flex-col items-center gap-space-8">
-              <span className="material-symbols-outlined text-[48px] text-outline-variant">search_off</span>
-              <p className="font-headline-sm text-base sm:text-headline-sm text-on-surface">No matching listings found</p>
-              <p className="text-xs sm:text-body-sm max-w-md">Try expanding your distance radius, changing transaction filters, or searching for other items.</p>
-              <button
-                onClick={handleResetFilters}
-                className="mt-2 bg-primary text-on-primary px-space-16 py-space-8 rounded font-label-bold text-xs sm:text-body-sm"
-              >
-                Reset Filters
-              </button>
-            </div>
+            nearbySuggestions.length > 0 ? (
+              <div className="flex flex-col gap-4 sm:gap-space-16">
+                {/* Nearby Suggestions Alert Box */}
+                <div className="bg-surface-container-lowest p-4 sm:p-space-20 rounded-2xl border-2 border-secondary/30 shadow-sm flex flex-col gap-space-12 relative overflow-hidden">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-[24px]">near_me</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="bg-secondary/15 text-secondary text-[10px] sm:text-badge font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          Nearby Hub Suggestions
+                        </span>
+                        <span className="text-xs text-on-surface-variant font-medium">
+                          Radius: &lt; {maxDistance} km
+                        </span>
+                      </div>
+                      <h3 className="font-headline-sm text-base sm:text-headline-sm font-bold text-on-surface mt-1">
+                        No products currently listed directly in "{currentLocation || 'your area'}"
+                      </h3>
+                      <p className="text-xs sm:text-body-sm text-on-surface-variant mt-1">
+                        Don't worry! We found verified equipment available in nearby locations around you. You can switch location, expand radius, or browse suggested items below:
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Nearest Hubs Action Chips */}
+                  {nearestLocations && nearestLocations.length > 0 && (
+                    <div className="flex flex-col gap-2 pt-2 border-t border-outline-variant/40">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
+                        Available in Nearest Hubs:
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {nearestLocations.map((loc, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              updateLocation(loc.location);
+                              onToast && onToast(`Location updated to ${loc.location}`);
+                            }}
+                            className="group flex items-center gap-1.5 bg-surface-container-low hover:bg-secondary hover:text-on-secondary px-3 py-1.5 rounded-lg border border-outline-variant/60 text-xs font-label-bold transition-all cursor-pointer shadow-2xs"
+                          >
+                            <span className="material-symbols-outlined text-[15px] text-secondary group-hover:text-on-secondary">
+                              location_on
+                            </span>
+                            <span>{loc.location}</span>
+                            <span className="text-[10px] bg-secondary-container text-on-secondary-container group-hover:bg-on-secondary group-hover:text-secondary px-1.5 py-0.5 rounded font-bold">
+                              {loc.distance_km} km • {loc.itemCount} {loc.itemCount === 1 ? 'item' : 'items'}
+                            </span>
+                          </button>
+                        ))}
+                        {maxDistance < 25 && (
+                          <button
+                            onClick={() => setMaxDistance(25)}
+                            className="flex items-center gap-1 bg-primary text-on-primary hover:bg-inverse-surface px-3 py-1.5 rounded-lg text-xs font-label-bold transition-all cursor-pointer shadow-xs"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">radar</span>
+                            <span>Expand to Whole City (25 km)</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Suggested Products Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[20px] text-secondary">explore</span>
+                    <h4 className="font-headline-sm text-sm sm:text-base font-bold text-on-surface">
+                      Products in Nearest Locations ({nearbySuggestions.length})
+                    </h4>
+                  </div>
+                  <span className="text-[11px] text-on-surface-variant">
+                    Sorted by proximity
+                  </span>
+                </div>
+
+                {/* Render Suggested Products */}
+                {viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-space-16">
+                    {nearbySuggestions.map((product) => (
+                      <div key={product.id} className="relative flex flex-col">
+                        <div className="mb-1 flex items-center justify-between text-[11px] text-on-surface-variant bg-surface-container-low px-2 py-1 rounded">
+                          <span className="flex items-center gap-1 font-semibold text-secondary">
+                            <span className="material-symbols-outlined text-[13px]">pin_drop</span>
+                            <span>{product.location_name}</span>
+                          </span>
+                          <span className="font-bold">{product.distance_km} km away</span>
+                        </div>
+                        <ProductCard
+                          product={product}
+                          onSelectProduct={(id) => onNavigate('product', { id })}
+                          onToast={onToast}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2.5 sm:gap-space-12">
+                    {nearbySuggestions.map((product) => (
+                      <div
+                        key={product.id}
+                        onClick={() => onNavigate('product', { id: product.id })}
+                        className="bg-surface-container-lowest rounded-xl p-2.5 sm:p-space-12 border border-outline-variant/60 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col sm:flex-row gap-3 sm:gap-space-16 items-start"
+                      >
+                        <img
+                          src={Array.isArray(product.images) ? product.images[0] : ''}
+                          alt={product.title}
+                          className="w-full sm:w-44 h-40 sm:h-36 object-cover rounded-lg bg-surface-container shrink-0"
+                        />
+                        <div className="flex-1 flex flex-col justify-between w-full min-w-0 h-full">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className={`text-[10px] sm:text-badge font-badge uppercase px-1.5 sm:px-space-6 py-0.5 rounded ${
+                                product.transaction_type === 'rent' ? 'bg-secondary text-on-secondary' : 'bg-primary text-on-primary'
+                              }`}>
+                                {product.transaction_type}
+                              </span>
+                              <span className="text-[11px] text-on-surface-variant font-medium">
+                                {product.condition_tag}
+                              </span>
+                              <span className="text-[11px] text-secondary font-bold ml-auto flex items-center gap-0.5">
+                                <span className="material-symbols-outlined text-[12px]">near_me</span>
+                                {product.distance_km} km away
+                              </span>
+                            </div>
+                            <h3 className="font-headline-sm text-sm sm:text-headline-sm text-on-surface truncate">
+                              {product.title}
+                            </h3>
+                            <p className="text-xs sm:text-body-sm text-on-surface-variant line-clamp-2 mt-1">
+                              {product.description}
+                            </p>
+                          </div>
+                          <div className="flex items-center justify-between pt-2 sm:pt-space-8 border-t border-outline-variant/40 mt-2 sm:mt-space-8">
+                            <div className="flex items-baseline gap-1">
+                              <span className="font-price-md text-sm sm:text-price-md font-bold text-on-surface">
+                                ₹{(product.rent_price_daily || product.sale_price).toLocaleString('en-IN')}
+                              </span>
+                              {product.transaction_type !== 'buy' && (
+                                <span className="text-xs text-on-surface-variant">/ day</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] sm:text-xs text-on-surface-variant">
+                              <span>📍 {product.location_name}</span>
+                              <span className="font-bold text-secondary">{product.distance_km} km</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-12 sm:p-16 text-center text-on-surface-variant bg-surface-container-lowest rounded-xl border border-outline-variant flex flex-col items-center gap-space-8">
+                <span className="material-symbols-outlined text-[48px] text-outline-variant">search_off</span>
+                <p className="font-headline-sm text-base sm:text-headline-sm text-on-surface">No matching listings found</p>
+                <p className="text-xs sm:text-body-sm max-w-md">Try expanding your distance radius, changing transaction filters, or searching for other items.</p>
+                <button
+                  onClick={handleResetFilters}
+                  className="mt-2 bg-primary text-on-primary px-space-16 py-space-8 rounded font-label-bold text-xs sm:text-body-sm"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            )
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-space-16">
               {products.map((product) => (

@@ -1,6 +1,11 @@
 import React from 'react';
+import { useMarketplace } from '../context/MarketplaceContext';
+import { useAuth } from '../context/AuthContext';
 
-export const Footer = ({ onNavigate }) => {
+export const Footer = ({ onNavigate, onToast }) => {
+  const { categories, hubs } = useMarketplace();
+  const { updateLocation } = useAuth();
+
   return (
     <footer className="bg-primary-container text-on-primary-container border-t border-outline/20 mt-space-32 mb-16 md:mb-0">
       {/* Trust Guarantee Band */}
@@ -57,11 +62,16 @@ export const Footer = ({ onNavigate }) => {
         <div className="flex flex-col gap-space-8">
           <h4 className="font-label-bold text-on-primary text-body-md uppercase tracking-wider">Top Rental Categories</h4>
           <ul className="flex flex-col gap-space-4 text-body-sm">
-            <li><button onClick={() => onNavigate('search', { category: 'cameras-audio' })} className="hover:text-secondary-fixed">Cameras & 4K Gear</button></li>
-            <li><button onClick={() => onNavigate('search', { category: 'laptops-mobiles' })} className="hover:text-secondary-fixed">Laptops & Workstations</button></li>
-            <li><button onClick={() => onNavigate('search', { category: 'power-tools-machinery' })} className="hover:text-secondary-fixed">Power Drills & Tools</button></li>
-            <li><button onClick={() => onNavigate('search', { category: 'bikes-cycles' })} className="hover:text-secondary-fixed">Geared Bicycles</button></li>
-            <li><button onClick={() => onNavigate('search', { category: 'home-furniture' })} className="hover:text-secondary-fixed">Ergonomic Chairs</button></li>
+            {categories.slice(0, 6).map((cat) => (
+              <li key={cat.id}>
+                <button
+                  onClick={() => onNavigate('search', { category: cat.id })}
+                  className="hover:text-secondary-fixed text-left transition-colors cursor-pointer"
+                >
+                  {cat.label || cat.name}
+                </button>
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -80,11 +90,20 @@ export const Footer = ({ onNavigate }) => {
           <h4 className="font-label-bold text-on-primary text-body-md uppercase tracking-wider">Hyperlocal Hubs</h4>
           <p className="text-body-sm">Active handover hubs in Gujarat:</p>
           <div className="flex flex-wrap gap-space-4">
-            <span className="bg-primary/60 text-secondary-fixed text-badge font-badge px-space-6 py-1 rounded">Infocity Kudasan</span>
-            <span className="bg-primary/60 text-secondary-fixed text-badge font-badge px-space-6 py-1 rounded">Sector 7 & 21</span>
-            <span className="bg-primary/60 text-secondary-fixed text-badge font-badge px-space-6 py-1 rounded">DA-IICT Campus</span>
-            <span className="bg-primary/60 text-secondary-fixed text-badge font-badge px-space-6 py-1 rounded">PDPU Raisan</span>
-            <span className="bg-primary/60 text-secondary-fixed text-badge font-badge px-space-6 py-1 rounded">GIFT City Hub</span>
+            {hubs.slice(0, 8).map((hub, idx) => (
+              <button
+                key={idx}
+                onClick={() => {
+                  if (updateLocation) updateLocation(hub.name);
+                  if (onToast) onToast(`Switched location to ${hub.name}`);
+                  onNavigate('search', { location: hub.name });
+                }}
+                className="bg-primary/60 hover:bg-secondary text-secondary-fixed hover:text-on-secondary text-badge font-badge px-space-6 py-1 rounded transition-colors cursor-pointer text-left"
+                title={`Filter by ${hub.name}`}
+              >
+                {hub.name}
+              </button>
+            ))}
           </div>
         </div>
       </div>

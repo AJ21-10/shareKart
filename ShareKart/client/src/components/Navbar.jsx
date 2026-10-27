@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
+import { useMarketplace } from "../context/MarketplaceContext";
 import { LocationModal } from "./LocationModal";
 
 export const Navbar = ({
@@ -12,6 +13,7 @@ export const Navbar = ({
   onOpenEditProfile,
   onOpenAadhaarVerification,
   activePage,
+  pageParams = {},
   onToast,
 }) => {
   const {
@@ -23,6 +25,7 @@ export const Navbar = ({
     demoAccounts,
   } = useAuth();
   const { cartCount } = useCart();
+  const { categories } = useMarketplace();
   const [searchCategory, setSearchCategory] = useState("All Categories");
   const [searchQuery, setSearchQuery] = useState("");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -60,9 +63,20 @@ export const Navbar = ({
     e.preventDefault();
     onNavigate("search", {
       q: searchQuery,
-      category: searchCategory !== "All Categories" ? searchCategory : "",
+      category:
+        searchCategory !== "All Categories" &&
+        searchCategory !== "all" &&
+        searchCategory !== "All"
+          ? searchCategory
+          : "all",
     });
     setMobileSearchOpen(false);
+  };
+
+  const handleAllCategoriesClick = () => {
+    setSearchQuery("");
+    setSearchCategory("All Categories");
+    onNavigate("search", { category: "all", q: "" });
   };
 
   return (
@@ -119,13 +133,12 @@ export const Navbar = ({
                 onChange={(e) => setSearchCategory(e.target.value)}
                 className="bg-surface-container-low text-on-surface max-w-xs font-body-sm text-body-sm px-space-8 py-space-8 border-none focus:ring-0 cursor-pointer"
               >
-                <option>All Categories</option>
-                <option value="cameras-audio">Cameras & Audio</option>
-                <option value="laptops-mobiles">Laptops & Mobiles</option>
-                <option value="power-tools-machinery">Tools & Equipment</option>
-                <option value="home-furniture">Furniture</option>
-                <option value="bikes-cycles">Bikes & Cycles</option>
-                <option value="home-appliances">Home Appliances</option>
+                <option value="All Categories">All Categories</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label || c.name}
+                  </option>
+                ))}
               </select>
               <div className="h-6 w-[1px] bg-outline-variant"></div>
               <input
@@ -177,7 +190,8 @@ export const Navbar = ({
 
               {/* Utility Icons */}
               <div className="flex items-center gap-0.5 sm:gap-space-8 text-on-primary">
-                <button
+                {/* chat  */}
+                {/* <button
                   onClick={onOpenChat}
                   className={`relative p-1 sm:p-space-6 hover:text-secondary-fixed transition-colors cursor-pointer ${
                     activePage === "chat" ||
@@ -193,7 +207,7 @@ export const Navbar = ({
                     forum
                   </span>
                   <span className="absolute top-0.5 right-0.5 w-1.5 sm:w-2 h-1.5 sm:h-2 bg-error rounded-full"></span>
-                </button>
+                </button> */}
 
                 <button
                   onClick={() => onNavigate("orders")}
@@ -541,13 +555,12 @@ export const Navbar = ({
                 onChange={(e) => setSearchCategory(e.target.value)}
                 className="bg-surface-container-low text-on-surface text-xs px-2 py-2 border-none focus:ring-0 cursor-pointer max-w-[100px] truncate"
               >
-                <option>All</option>
-                <option value="cameras-audio">Cameras</option>
-                <option value="laptops-mobiles">Laptops</option>
-                <option value="power-tools-machinery">Tools</option>
-                <option value="home-furniture">Furniture</option>
-                <option value="bikes-cycles">Bikes</option>
-                <option value="home-appliances">Appliances</option>
+                <option value="All Categories">All Categories</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label || c.name}
+                  </option>
+                ))}
               </select>
               <div className="h-5 w-[1px] bg-outline-variant"></div>
               <input
@@ -572,32 +585,34 @@ export const Navbar = ({
           {/* Categories Bar Navigation */}
           <nav className="flex items-center gap-1 sm:gap-space-8 overflow-x-auto pb-0.5 sm:pb-1 text-[11px] sm:text-body-sm font-body-sm scrollbar-none -mx-2.5 px-2.5 sm:mx-0 sm:px-0">
             <button
-              onClick={() => onNavigate("home")}
-              className={`whitespace-nowrap px-2 sm:px-space-8 py-0.5 sm:py-space-2 rounded text-[11px] sm:text-body-sm transition-colors ${
-                activePage === "home"
+              onClick={handleAllCategoriesClick}
+              className={`whitespace-nowrap px-2 sm:px-space-8 py-0.5 sm:py-space-2 rounded text-[11px] sm:text-body-sm transition-colors cursor-pointer ${
+                activePage === "search" &&
+                (!pageParams?.category || pageParams?.category === "all") &&
+                !pageParams?.q
                   ? "bg-surface text-on-surface font-label-bold shadow-xs"
                   : "text-on-primary hover:text-secondary-fixed"
               }`}
             >
               All Categories
             </button>
-            {[
-              { id: "laptops-mobiles", label: "Laptops & Mobiles" },
-              { id: "home-furniture", label: "Home Furniture" },
-              { id: "power-tools-machinery", label: "Power Tools" },
-              { id: "cameras-audio", label: "Cameras & Audio" },
-              { id: "bikes-cycles", label: "Bikes & Cycles" },
-              { id: "home-appliances", label: "Home Appliances" },
-              { id: "books-sports", label: "Books & Sports" },
-            ].map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => onNavigate("search", { category: cat.id })}
-                className="whitespace-nowrap px-2 sm:px-space-8 py-1 sm:py-space-2 rounded text-on-primary hover:text-secondary-fixed transition-colors"
-              >
-                {cat.label}
-              </button>
-            ))}
+            {categories.map((cat) => {
+              const isCatActive =
+                activePage === "search" && pageParams?.category === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => onNavigate("search", { category: cat.id, q: "" })}
+                  className={`whitespace-nowrap px-2 sm:px-space-8 py-0.5 sm:py-space-2 rounded text-[11px] sm:text-body-sm transition-colors cursor-pointer ${
+                    isCatActive
+                      ? "bg-surface text-on-surface font-label-bold shadow-xs"
+                      : "text-on-primary hover:text-secondary-fixed"
+                  }`}
+                >
+                  {cat.label || cat.name}
+                </button>
+              );
+            })}
 
             <div className="hidden sm:flex items-center gap-1.5 ml-auto pl-2 border-l border-outline/30 shrink-0">
               <button
