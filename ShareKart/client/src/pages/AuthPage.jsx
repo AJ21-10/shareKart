@@ -73,7 +73,6 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
 
   // Phone OTP state for Registration
   const [regOtp, setRegOtp] = useState(["", "", "", "", "", ""]);
-  const [currentLiveOtp, setCurrentLiveOtp] = useState("123456");
   const [otpSent, setOtpSent] = useState(false);
   const [otpSending, setOtpSending] = useState(false);
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
@@ -81,6 +80,35 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
   const [otpError, setOtpError] = useState("");
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [verifiedPhone, setVerifiedPhone] = useState("");
+
+  const handleOpenPhoneEmail = () => {
+    const clientId =
+      import.meta.env.VITE_PHONE_EMAIL_CLIENT_ID || "11753610740663059476";
+    const redirectUrl = encodeURIComponent(window.location.origin);
+    const authUrl = `https://auth.phone.email/log-in?client_id=${clientId}&redirect_url=${redirectUrl}&auth_type=2`;
+    const width = 500;
+    const height = 560;
+    const left = Math.max(0, (window.screen.width - width) / 2);
+    const top = Math.max(0, (window.screen.height - height) / 2);
+
+    const popup = window.open(
+      authUrl,
+      "peLoginWindow",
+      `toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=0,width=${width},height=${height},top=${top},left=${left}`,
+    );
+
+    if (!popup || popup.closed || typeof popup.closed === "undefined") {
+      onToast &&
+        onToast(
+          "⚠️ Popup blocked! Please allow popups to verify your phone via Phone.Email.",
+        );
+    } else {
+      onToast &&
+        onToast(
+          "📲 Phone.Email verification window opened. Complete OTP verification in the popup.",
+        );
+    }
+  };
 
   // UI status
   const [loading, setLoading] = useState(false);
@@ -885,30 +913,6 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
                   {/* OTP Entry Field */}
                   {otpSent && !isPhoneVerified && (
                     <div className="mt-1.5 p-3.5 bg-surface-container-low rounded-xl border border-primary/30 flex flex-col gap-2.5 animate-fade-in">
-                      {/* [COMMENTED OUT] Backup / Fallback OTP Banner as requested */}
-                      {/*
-                      <div className="bg-surface-container-lowest border border-secondary/30 rounded-lg p-2.5 flex items-center justify-between shadow-xs">
-                        <div className="flex items-center gap-2 text-xs text-on-surface">
-                          <span className="material-symbols-outlined text-secondary text-[20px]">
-                            sms
-                          </span>
-                          <span className="text-[11px] text-on-surface-variant font-medium">
-                            OTP Code: <strong className="text-secondary font-mono text-xs">{currentLiveOtp}</strong>
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setRegOtp(currentLiveOtp.split(""));
-                            onToast && onToast(`Auto-filled OTP: ${currentLiveOtp}!`);
-                          }}
-                          className="text-[10px] text-secondary font-bold bg-secondary/10 hover:bg-secondary/20 px-2.5 py-1 rounded-md border border-secondary/20 transition cursor-pointer"
-                        >
-                          Auto-Fill {currentLiveOtp}
-                        </button>
-                      </div>
-                      */}
-
                       {/* 6-Digit OTP Input Boxes */}
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
@@ -1222,8 +1226,8 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              {demoAccounts.map((account) => (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {demoAccounts.slice(0, 4).map((account) => (
                 <button
                   key={account.id}
                   type="button"
@@ -1238,12 +1242,14 @@ export const AuthPage = ({ initialMode = "login", onNavigate, onToast }) => {
                   <span className="font-label-bold text-[11px] leading-tight text-on-surface group-hover:text-on-secondary-container truncate w-full">
                     {account.name.split(" ")[0]}
                   </span>
-                  <span className="text-[9px] text-secondary font-bold uppercase mt-0.5">
+                  <span className="text-[9px] text-secondary font-bold uppercase mt-0.5 truncate w-full">
                     {account.id === 1
-                      ? "Seller"
+                      ? "Host (Laptops)"
                       : account.id === 2
-                        ? "Lender"
-                        : "Renter"}
+                        ? "Host (Appliances)"
+                        : account.id === 3
+                          ? "Student Renter"
+                          : "Citizen"}
                   </span>
                 </button>
               ))}

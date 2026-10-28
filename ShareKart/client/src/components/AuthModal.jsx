@@ -59,7 +59,6 @@ export const AuthModal = ({ isOpen, onClose, onToast, onOpenFullPage }) => {
 
   // Phone OTP state for Registration
   const [regOtp, setRegOtp] = useState(["", "", "", "", "", ""]);
-  const [currentLiveOtp, setCurrentLiveOtp] = useState("123456");
   const [otpSent, setOtpSent] = useState(false);
   const [otpSending, setOtpSending] = useState(false);
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
@@ -67,6 +66,28 @@ export const AuthModal = ({ isOpen, onClose, onToast, onOpenFullPage }) => {
   const [otpCountdown, setOtpCountdown] = useState(0);
   const [otpError, setOtpError] = useState("");
   const [verifyingOtp, setVerifyingOtp] = useState(false);
+
+  const handleOpenPhoneEmail = () => {
+    const clientId = import.meta.env.VITE_PHONE_EMAIL_CLIENT_ID || "11753610740663059476";
+    const redirectUrl = encodeURIComponent(window.location.origin);
+    const authUrl = `https://auth.phone.email/log-in?client_id=${clientId}&redirect_url=${redirectUrl}&auth_type=2`;
+    const width = 500;
+    const height = 560;
+    const left = Math.max(0, (window.screen.width - width) / 2);
+    const top = Math.max(0, (window.screen.height - height) / 2);
+
+    const popup = window.open(
+      authUrl,
+      'peLoginWindow',
+      `toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=0,width=${width},height=${height},top=${top},left=${left}`
+    );
+
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      onToast && onToast("⚠️ Popup blocked! Please allow popups to verify your phone via Phone.Email.");
+    } else {
+      onToast && onToast("📲 Phone.Email verification window opened. Complete OTP verification in the popup.");
+    }
+  };
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -503,32 +524,23 @@ export const AuthModal = ({ isOpen, onClose, onToast, onOpenFullPage }) => {
                   </div>
                 )}
 
+                {/* Verify with Phone.Email official popup button */}
+                {!isPhoneVerified && (
+                  <button
+                    type="button"
+                    onClick={handleOpenPhoneEmail}
+                    className="mt-2 w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-[#02BD7E]/40 bg-[#02BD7E]/10 hover:bg-[#02BD7E]/20 text-[#02BD7E] text-xs font-bold transition-all cursor-pointer shadow-xs"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M19.95 21C17.8667 21 15.8083 20.5458 13.775 19.6375C11.7417 18.7292 9.89167 17.4417 8.225 15.775C6.55833 14.1083 5.27083 12.2583 4.3625 10.225C3.45417 8.19167 3 6.13333 3 4.05C3 3.75 3.1 3.5 3.3 3.3C3.5 3.1 3.75 3 4.05 3H8.1C8.33333 3 8.54167 3.07917 8.725 3.2375C8.90833 3.39583 9.01667 3.58333 9.05 3.8L9.7 7.3C9.73333 7.56667 9.725 7.79167 9.675 7.975C9.625 8.15833 9.53333 8.31667 9.4 8.45L6.975 10.9C7.30833 11.5167 7.70417 12.1125 8.1625 12.6875C8.62083 13.2625 9.125 13.8167 9.675 14.35C10.1917 14.8667 10.7333 15.3458 11.3 15.7875C11.8667 16.2292 12.4667 16.6333 13.1 17L15.45 14.65C15.6 14.5 15.7958 14.3875 16.0375 14.3125C16.2792 14.2375 16.5167 14.2167 16.75 14.25L20.2 14.95C20.4333 15.0167 20.625 15.1375 20.775 15.3125C20.925 15.4875 21 15.6833 21 15.9V19.95C21 20.25 20.9 20.5 20.7 20.7C20.5 20.9 20.25 21 19.95 21Z"/>
+                    </svg>
+                    <span>Verify Mobile via Phone.Email (SMS / WhatsApp)</span>
+                  </button>
+                )}
+
                 {/* Real-time OTP section */}
                 {otpSent && !isPhoneVerified && (
                   <div className="mt-2 p-2.5 bg-surface-container-low rounded-lg border border-primary/30 flex flex-col gap-2 animate-fade-in">
-                    {/* [COMMENTED OUT] Backup / Fallback OTP Display Banner as requested */}
-                    {/*
-                    <div className="bg-surface-container-lowest border border-secondary/30 rounded p-2 flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5 text-xs text-on-surface">
-                        <span className="material-symbols-outlined text-secondary text-[18px]">
-                          sms
-                        </span>
-                        <span className="text-[11px] text-on-surface-variant font-medium">
-                          OTP Code: <strong className="text-secondary font-mono text-xs">{currentLiveOtp}</strong>
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRegOtp(currentLiveOtp.split(""));
-                          onToast && onToast(`Auto-filled OTP: ${currentLiveOtp}!`);
-                        }}
-                        className="text-[10px] text-secondary font-bold bg-secondary/10 hover:bg-secondary/20 px-2 py-0.5 rounded border border-secondary/20 transition cursor-pointer"
-                      >
-                        Auto-Fill {currentLiveOtp}
-                      </button>
-                    </div>
-                    */}
                     <div className="flex items-center justify-between text-xs px-1 text-on-surface-variant">
                       <span className="text-[11px] font-medium flex items-center gap-1 text-primary">
                         <span className="material-symbols-outlined text-[16px]">sms</span>

@@ -20,7 +20,7 @@ const poolConfig = connectionString
   ? {
       connectionString,
       ssl: useSsl ? { rejectUnauthorized: false } : undefined,
-      connectionTimeoutMillis: 5000,
+      connectionTimeoutMillis: 15000,
     }
   : {
       user: process.env.PGUSER || 'postgres',
@@ -29,7 +29,7 @@ const poolConfig = connectionString
       password: process.env.PGPASSWORD || 'postgres',
       port: Number(process.env.PGPORT) || 5432,
       ssl: useSsl ? { rejectUnauthorized: false } : undefined,
-      connectionTimeoutMillis: 5000,
+      connectionTimeoutMillis: 15000,
     };
 
 export const pool = new Pool(poolConfig);

@@ -82,9 +82,9 @@ export const login = async (req, res, next) => {
     const cleanInput = email.trim();
     const cleanDigits = cleanInput.replace(/\D/g, '').slice(-10);
 
-    // Support login by email OR by 10-digit phone number
+    // Support login by email OR by 10-digit phone number OR username prefix
     let user = null;
-    if (cleanDigits.length === 10) {
+    if (cleanDigits.length === 10 && !cleanInput.includes('@')) {
       user = await db.get(
         `SELECT * FROM users 
          WHERE LOWER(email) = LOWER(?) 
@@ -93,8 +93,17 @@ export const login = async (req, res, next) => {
       );
     } else {
       user = await db.get(
-        'SELECT * FROM users WHERE LOWER(email) = LOWER(?)',
-        [cleanInput]
+        `SELECT * FROM users 
+         WHERE LOWER(email) = LOWER(?)
+            OR LOWER(SPLIT_PART(email, '@', 1)) = LOWER(?)
+            OR LOWER(email) = LOWER(?)`,
+        [
+          cleanInput,
+          cleanInput,
+          cleanInput.includes('@')
+            ? cleanInput.replace(/@sharekart\.[a-z]+$/i, '@sharekart.in')
+            : `${cleanInput}@sharekart.in`
+        ]
       );
     }
 

@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
     const fetchDemoUsers = async () => {
       try {
         const data = await api.getDemoUsers();
-        if (data.success) {
+        if (data.success && Array.isArray(data.demoAccounts)) {
           setDemoAccounts(data.demoAccounts);
         }
       } catch (err) {
@@ -38,7 +38,6 @@ export const AuthProvider = ({ children }) => {
           }
         } catch (err) {
           console.error('Auth verification failed', err);
-          // Don't log out if offline, keep current state if present
         }
       }
       setLoading(false);
