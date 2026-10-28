@@ -24,7 +24,20 @@ export const MarketplaceProvider = ({ children }) => {
       const deletedIds = JSON.parse(localStorage.getItem(STORAGE_DELETED_IDS) || "[]");
       const customProducts = JSON.parse(localStorage.getItem(STORAGE_CUSTOM_PRODUCTS) || "[]");
       const safeDeleted = Array.isArray(deletedIds) ? deletedIds : [];
-      const safeCustom = Array.isArray(customProducts) ? customProducts : [];
+      const safeCustom = (Array.isArray(customProducts) ? customProducts : [])
+        .map(p => {
+          if (!p) return null;
+          const cleanedImages = Array.isArray(p.images)
+            ? p.images.filter(img => typeof img === 'string' && !img.startsWith('blob:'))
+            : [];
+          return {
+            ...p,
+            images: cleanedImages.length > 0 ? cleanedImages : [
+              p.image && !p.image.startsWith('blob:') ? p.image : 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80'
+            ]
+          };
+        })
+        .filter(Boolean);
       const baseList = (INITIAL_PRODUCTS || []).filter(p => p && !safeDeleted.includes(p.id));
       return [...safeCustom, ...baseList];
     } catch {
@@ -61,11 +74,12 @@ export const MarketplaceProvider = ({ children }) => {
         const safeCustom = Array.isArray(customProducts) ? customProducts : [];
         const apiList = prodRes.value.products.filter(p => p && !safeDeleted.includes(p.id));
 
-        // Merge initialData products that might not be in the database seed yet
-        const apiProductIds = new Set(apiList.map(p => p.id));
-        const extraInitial = (INITIAL_PRODUCTS || []).filter(p => p && !apiProductIds.has(p.id) && !safeDeleted.includes(p.id));
+        // Always keep INITIAL_PRODUCTS from initialData.js as primary source
+        const initialIds = new Set((INITIAL_PRODUCTS || []).map(p => p.id));
+        const extraFromApi = apiList.filter(p => !initialIds.has(p.id));
+        const baseList = (INITIAL_PRODUCTS || []).filter(p => p && !safeDeleted.includes(p.id));
 
-        setProducts([...safeCustom, ...apiList, ...extraInitial]);
+        setProducts([...safeCustom, ...baseList, ...extraFromApi]);
       }
     } catch (err) {
       console.warn("MarketplaceContext API sync fallback to initialData", err);
@@ -129,15 +143,35 @@ export const MarketplaceProvider = ({ children }) => {
   };
 
   /**
-   * Find product by ID
+   * Find product by ID (supports number 6, string '6', or formatted '#SK-6')
    */
   const getProductById = (id) => {
-    const targetId = Number(id);
-    return products.find(p => p.id === targetId) || null;
+    if (id === null || id === undefined) return null;
+    const cleanId = String(id).replace(/^[#\s]*SK-?/i, "").trim();
+    const numId = Number(cleanId);
+
+    // Look in current products state first
+    let found = (products || []).find(p => p && (
+      p.id === numId ||
+      String(p.id) === String(id) ||
+      String(p.id) === cleanId
+    ));
+
+    // Direct fallback to INITIAL_PRODUCTS from initialData.js
+    if (!found) {
+      found = (INITIAL_PRODUCTS || []).find(p => p && (
+        p.id === numId ||
+        String(p.id) === String(id) ||
+        String(p.id) === cleanId
+      ));
+    }
+
+    return found || null;
   };
 
   /**
-   * Filter products by category, transaction type, search term, and user location
+   * Filter products by category, transaction type, search term, price, and user location
+   * Root source is always initialData.js (plus user-added custom products)
    */
   const filterProducts = ({
     category = "all",
@@ -145,9 +179,13 @@ export const MarketplaceProvider = ({ children }) => {
     query = "",
     location = "",
     maxDistance = 25,
-    verifiedOnly = false
+    verifiedOnly = false,
+    minPrice = "",
+    maxPrice = "",
+    sort = "distance"
   } = {}) => {
-    let result = products.map(p => {
+    const sourceList = (products && products.length > 0) ? products : (INITIAL_PRODUCTS || []);
+    let result = sourceList.map(p => {
       const dist = location ? calculateDistanceKm(location, p.location_name) : (p.distance_km || 2.5);
       return { ...p, distance_km: dist };
     });
@@ -174,6 +212,40 @@ export const MarketplaceProvider = ({ children }) => {
       result = result.filter(p => p.seller_is_verified);
     }
 
+    if (minPrice !== "" && !isNaN(Number(minPrice))) {
+      result = result.filter(p => {
+        const price = p.transaction_type === 'rent' ? p.rent_price_daily : (p.sale_price || p.rent_price_daily);
+        return (price || 0) >= Number(minPrice);
+      });
+    }
+
+    if (maxPrice !== "" && !isNaN(Number(maxPrice))) {
+      result = result.filter(p => {
+        const price = p.transaction_type === 'rent' ? p.rent_price_daily : (p.sale_price || p.rent_price_daily);
+        return (price || 0) <= Number(maxPrice);
+      });
+    }
+
+    // Sort order
+    if (sort === "price-asc") {
+      result.sort((a, b) => {
+        const priceA = a.rent_price_daily || a.sale_price || 0;
+        const priceB = b.rent_price_daily || b.sale_price || 0;
+        return priceA - priceB;
+      });
+    } else if (sort === "price-desc") {
+      result.sort((a, b) => {
+        const priceA = a.rent_price_daily || a.sale_price || 0;
+        const priceB = b.rent_price_daily || b.sale_price || 0;
+        return priceB - priceA;
+      });
+    } else if (sort === "rating") {
+      result.sort((a, b) => (b.seller_rating || 0) - (a.seller_rating || 0));
+    } else {
+      // default: distance
+      result.sort((a, b) => (a.distance_km || 0) - (b.distance_km || 0));
+    }
+
     const inRadius = location && maxDistance
       ? result.filter(p => p.distance_km <= Number(maxDistance))
       : result;
@@ -183,7 +255,7 @@ export const MarketplaceProvider = ({ children }) => {
       : [];
 
     return {
-      products: inRadius.sort((a, b) => a.distance_km - b.distance_km),
+      products: inRadius,
       nearbySuggestions: nearby,
       totalCount: inRadius.length
     };

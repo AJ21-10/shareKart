@@ -191,7 +191,7 @@ export const Navbar = ({
               {/* Utility Icons */}
               <div className="flex items-center gap-0.5 sm:gap-space-8 text-on-primary">
                 {/* chat  */}
-                {/* <button
+                <button
                   onClick={onOpenChat}
                   className={`relative p-1 sm:p-space-6 hover:text-secondary-fixed transition-colors cursor-pointer ${
                     activePage === "chat" ||
@@ -207,7 +207,7 @@ export const Navbar = ({
                     forum
                   </span>
                   <span className="absolute top-0.5 right-0.5 w-1.5 sm:w-2 h-1.5 sm:h-2 bg-error rounded-full"></span>
-                </button> */}
+                </button>
 
                 <button
                   onClick={() => onNavigate("orders")}
@@ -602,7 +602,9 @@ export const Navbar = ({
               return (
                 <button
                   key={cat.id}
-                  onClick={() => onNavigate("search", { category: cat.id, q: "" })}
+                  onClick={() =>
+                    onNavigate("search", { category: cat.id, q: "" })
+                  }
                   className={`whitespace-nowrap px-2 sm:px-space-8 py-0.5 sm:py-space-2 rounded text-[11px] sm:text-body-sm transition-colors cursor-pointer ${
                     isCatActive
                       ? "bg-surface text-on-surface font-label-bold shadow-xs"

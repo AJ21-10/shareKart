@@ -44,57 +44,28 @@ export const SearchPage = ({ initialFilters = {}, onNavigate, onToast }) => {
   const fetchResults = async () => {
     setLoading(true);
     try {
-      const params = {
-        q: searchQuery,
-        category: selectedCategory !== 'all' ? selectedCategory : '',
-        type: transactionType !== 'all' ? transactionType : '',
-        maxDistance,
-        verifiedOnly,
-        sort: sortBy,
-        minPrice,
-        maxPrice,
-        location: currentLocation || ''
-      };
-
-      const [prodRes, catRes] = await Promise.all([
-        api.getProducts(params).catch(e => ({ success: false })),
-        api.getCategories().catch(e => ({ success: false }))
-      ]);
-
-      if (prodRes?.success && prodRes.products) {
-        setProducts(prodRes.products || []);
-        setNearbySuggestions(prodRes.nearbySuggestions || []);
-        setNearestLocations(prodRes.nearestLocations || []);
-      } else {
-        const local = filterProducts({
-          category: selectedCategory,
-          type: transactionType,
-          query: searchQuery,
-          location: currentLocation,
-          maxDistance,
-          verifiedOnly
-        });
-        setProducts(local.products);
-        setNearbySuggestions(local.nearbySuggestions);
-      }
-
-      if (catRes?.success && catRes.categories?.length > 0) {
-        setCategories(catRes.categories);
-      } else if (contextCategories?.length > 0) {
-        setCategories(contextCategories);
-      }
-    } catch (err) {
-      console.error('Search query failed, using marketplace fallback', err);
+      // Load and filter products directly from initialData.js via MarketplaceContext
       const local = filterProducts({
         category: selectedCategory,
         type: transactionType,
         query: searchQuery,
         location: currentLocation,
         maxDistance,
-        verifiedOnly
+        verifiedOnly,
+        minPrice,
+        maxPrice,
+        sort: sortBy
       });
-      setProducts(local.products);
-      setNearbySuggestions(local.nearbySuggestions);
+
+      setProducts(local.products || []);
+      setNearbySuggestions(local.nearbySuggestions || []);
+      setNearestLocations([]);
+
+      if (contextCategories?.length > 0) {
+        setCategories(contextCategories);
+      }
+    } catch (err) {
+      console.error('Search query failed, using marketplace fallback', err);
     } finally {
       setLoading(false);
     }

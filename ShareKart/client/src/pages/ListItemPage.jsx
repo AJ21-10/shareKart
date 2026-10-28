@@ -124,16 +124,34 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
     setPhotos((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    const newItems = Array.from(files).map((f, i) => ({
-      id: Date.now() + i,
-      url: URL.createObjectURL(f),
-      label: ''
-    }));
-    setPhotos((prev) => [...prev, ...newItems]);
-    onToast && onToast(`${files.length} photo(s) added!`);
+
+    const readFileAsDataUrl = (file) =>
+      new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(file);
+      });
+
+    const fileList = Array.from(files);
+    const loadedPhotos = await Promise.all(
+      fileList.map(async (f, i) => {
+        const dataUrl = await readFileAsDataUrl(f);
+        return {
+          id: Date.now() + i,
+          url: dataUrl,
+          name: f.name,
+          label: ''
+        };
+      })
+    );
+
+    const validPhotos = loadedPhotos.filter((p) => Boolean(p.url));
+    setPhotos((prev) => [...prev, ...validPhotos]);
+    onToast && onToast(`${validPhotos.length} photo(s) added!`);
   };
 
   const handlePublish = async (e) => {
@@ -172,6 +190,10 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
         ...customAccessories
       ];
 
+      const rawImages = photos
+        .map((p) => p.url)
+        .filter((u) => u && !u.startsWith('blob:'));
+
       const payload = {
         title,
         category_id: category,
@@ -188,18 +210,20 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
         location_name: pickupLocation,
         has_invoice: hasInvoice,
         kit_items: kitItems,
-        images: photos.map((p) => p.url)
+        images: rawImages
       };
 
       const res = await api.createProduct(payload);
       if (res.success || res.productId) {
+        const savedImages = res.images || (Array.isArray(res.product?.images) ? res.product.images : null) || rawImages;
         if (addProduct) {
           addProduct({
             ...payload,
             id: res.productId || Date.now(),
             seller_name: user?.name || 'Local Host',
             seller_rating: '5.0',
-            seller_is_verified: true
+            seller_is_verified: true,
+            images: savedImages
           });
         }
         onToast && onToast('Item successfully published to Gandhinagar neighborhood!');
@@ -730,6 +754,17 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                   </div>
                 </div>
               </div>
+
+              {/* Handover Guarantee Card */}
+              <div className="flex items-start gap-space-12 p-space-12 bg-secondary-container/20 rounded-lg border border-secondary-container/40">
+                <span className="material-symbols-outlined text-[22px] text-secondary shrink-0 mt-0.5">videocam</span>
+                <div className="flex flex-col">
+                  <span className="font-label-bold text-label-bold text-on-surface">Sharekart Handover Guarantee</span>
+                  <p className="text-body-sm font-body-sm text-on-surface-variant mt-0.5">
+                    Quick 30-sec power test in front of borrower during local pickup before releasing the one-time OTP.
+                  </p>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -750,6 +785,14 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
             </div>
 
             <div className="flex flex-col gap-space-16">
+              {/* Lender Tip Card */}
+              <div className="flex items-center gap-space-8 bg-surface-container-low p-space-12 rounded-lg">
+                <span className="material-symbols-outlined text-[20px] text-on-tertiary-container">lightbulb</span>
+                <p className="text-body-sm font-body-sm text-on-surface leading-snug">
+                  <strong>Lender Tip:</strong> Clear photos showing serial number &amp; purchase bill receive <strong>3x more bookings</strong>.
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-space-12">
                 {photos.map((p, idx) => (
                   <div key={p.id} className="relative group rounded-lg overflow-hidden bg-surface-container-low shadow-sm aspect-video sm:aspect-square">
@@ -938,6 +981,9 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                 <span className="material-symbols-outlined text-[20px] text-secondary">trending_up</span>
                 <span className="font-label-bold text-label-bold text-on-surface">Earnings Simulator</span>
               </div>
+              <span className="text-badge font-badge bg-secondary-container text-on-secondary-container px-space-6 py-0.5 rounded">
+                {pickupLocation || 'Neighborhood'} Hot Item
+              </span>
             </div>
 
             <div className="bg-surface-container-low p-space-12 rounded-lg flex flex-col gap-1">
@@ -948,21 +994,35 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
                 </span>
                 <span className="text-badge font-badge text-on-surface-variant">/ month</span>
               </div>
+              <span className="text-badge font-badge text-on-surface-variant">
+                Assumes 12 to 16 rental days @ ₹{dailyRate}/day
+              </span>
             </div>
 
             {/* Mini Visual Chart (Earnings Breakdown) */}
             <div className="flex flex-col gap-space-6">
               <div className="flex justify-between text-body-sm font-body-sm">
-                <span className="text-on-surface">Take-home (95%)</span>
-                <span className="font-label-bold text-on-surface">₹{takeHomePerDay} / day</span>
+                <span className="text-on-surface">Your Take-home</span>
+                <span className="font-label-bold text-on-surface">95% (₹{takeHomePerDay} / day)</span>
               </div>
               <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden flex">
                 <div className="bg-secondary h-full" style={{ width: '95%' }}></div>
                 <div className="bg-primary h-full" style={{ width: '5%' }}></div>
               </div>
               <div className="flex justify-between text-badge font-badge text-on-surface-variant">
-                <span>Direct to UPI</span>
-                <span>5% platform fee</span>
+                <span>Direct to your UPI</span>
+                <span>5% Sharekart platform fee</span>
+              </div>
+            </div>
+
+            {/* ROI Indicator Card */}
+            <div className="p-space-12 bg-surface-container-low rounded-lg flex items-center gap-space-12">
+              <span className="material-symbols-outlined text-[28px] text-secondary shrink-0">savings</span>
+              <div className="flex flex-col">
+                <span className="font-label-bold text-label-bold text-on-surface">100% Asset Payback</span>
+                <span className="text-body-sm font-body-sm text-on-surface-variant">
+                  This item recovers its full ₹{(Number(salePrice) || 6400).toLocaleString('en-IN')} MRP after just {paybackDays} days of neighborhood rentals.
+                </span>
               </div>
             </div>
           </div>
@@ -970,24 +1030,41 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
           {/* Trust Pillars Card */}
           <div className="bg-primary-container text-on-primary rounded-xl p-4 sm:p-space-20 shadow-md flex flex-col gap-space-16">
             <div className="flex items-center gap-space-8">
-              <span className="material-symbols-outlined text-[22px] text-secondary-fixed">gshield</span>
-              <h3 className="font-headline-sm text-headline-sm text-on-primary font-bold">Host Protection</h3>
+              <span className="material-symbols-outlined text-[24px] text-secondary-fixed">gshield</span>
+              <h3 className="font-headline-sm text-headline-sm text-on-primary font-bold">Host Protection Shield</h3>
             </div>
 
-            <div className="flex flex-col gap-space-12 text-body-sm">
-              <div className="flex items-center gap-space-8">
-                <span className="material-symbols-outlined text-[18px] text-secondary-fixed shrink-0">verified</span>
-                <span>Aadhaar Verified Renters</span>
+            <div className="flex flex-col gap-space-16">
+              <div className="flex items-start gap-space-12">
+                <span className="material-symbols-outlined text-[20px] text-secondary-fixed shrink-0 mt-0.5">verified</span>
+                <div className="flex flex-col">
+                  <span className="font-label-bold text-label-bold text-on-primary">100% Aadhaar Verified Renters</span>
+                  <p className="text-body-sm font-body-sm text-surface-container-high mt-0.5">
+                    Every borrower verifies identity through UIDAI OTP e-sign before requesting an item.
+                  </p>
+                </div>
               </div>
 
-              <div className="flex items-center gap-space-8">
-                <span className="material-symbols-outlined text-[18px] text-secondary-fixed shrink-0">account_balance_wallet</span>
-                <span>₹{Number(securityDeposit || 1500).toLocaleString('en-IN')} Escrow Security Deposit</span>
+              <div className="flex items-start gap-space-12">
+                <span className="material-symbols-outlined text-[20px] text-secondary-fixed shrink-0 mt-0.5">account_balance_wallet</span>
+                <div className="flex flex-col">
+                  <span className="font-label-bold text-label-bold text-on-primary">
+                    ₹{Number(securityDeposit || 1500).toLocaleString('en-IN')} Upfront Escrow Deposit
+                  </span>
+                  <p className="text-body-sm font-body-sm text-surface-container-high mt-0.5">
+                    Stored in safe bank escrow. Any broken accessories or loss is automatically compensated.
+                  </p>
+                </div>
               </div>
 
-              <div className="flex items-center gap-space-8">
-                <span className="material-symbols-outlined text-[18px] text-secondary-fixed shrink-0">bolt</span>
-                <span>Instant UPI Payout on return</span>
+              <div className="flex items-start gap-space-12">
+                <span className="material-symbols-outlined text-[20px] text-secondary-fixed shrink-0 mt-0.5">bolt</span>
+                <div className="flex flex-col">
+                  <span className="font-label-bold text-label-bold text-on-primary">Instant UPI Payout</span>
+                  <p className="text-body-sm font-body-sm text-surface-container-high mt-0.5">
+                    Funds land in your PhonePe, Google Pay, or bank within 2 hours of pickup confirmation.
+                  </p>
+                </div>
               </div>
             </div>
           </div>

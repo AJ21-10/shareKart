@@ -1,6 +1,34 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import db from '../config/db.js';
 import { parseJson } from '../utils/helpers.js';
 import { calculateDistanceKm } from '../utils/locationHelper.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsDir = path.join(__dirname, '../../uploads');
+
+export const saveBase64Image = (dataUrl, prefix = 'product') => {
+  try {
+    if (!dataUrl || typeof dataUrl !== 'string') return null;
+    const matches = dataUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+    if (!matches) return null;
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    const rawExt = matches[1].toLowerCase();
+    const ext = rawExt === 'jpeg' ? 'jpg' : rawExt === 'svg+xml' ? 'svg' : rawExt;
+    const base64Data = matches[2];
+    const filename = `${prefix}-${Date.now()}-${Math.round(Math.random() * 1e6)}.${ext}`;
+    const filepath = path.join(uploadsDir, filename);
+    fs.writeFileSync(filepath, Buffer.from(base64Data, 'base64'));
+    return `/uploads/${filename}`;
+  } catch (err) {
+    console.error('Failed to save base64 image:', err);
+    return null;
+  }
+};
 
 export const getProducts = async (req, res, next) => {
   try {
@@ -268,7 +296,22 @@ export const createProduct = async (req, res, next) => {
       'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80'
     ];
 
-    const imageArray = Array.isArray(images) && images.length > 0 ? images : defaultImages;
+    const imageArray = [];
+    if (Array.isArray(images) && images.length > 0) {
+      for (const img of images) {
+        if (typeof img === 'string') {
+          if (img.startsWith('data:image/')) {
+            const savedUrl = saveBase64Image(img);
+            if (savedUrl) imageArray.push(savedUrl);
+          } else if (!img.startsWith('blob:')) {
+            imageArray.push(img);
+          }
+        }
+      }
+    }
+    if (imageArray.length === 0) {
+      imageArray.push(...defaultImages);
+    }
 
     const sql = `
       INSERT INTO products (
@@ -317,7 +360,42 @@ export const createProduct = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: 'Product listed successfully on Sharekart!',
-      productId: newProductId
+      productId: newProductId,
+      images: imageArray
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadProductImage = async (req, res, next) => {
+  try {
+    const { image, images } = req.body;
+    const toProcess = Array.isArray(images) ? images : image ? [image] : [];
+    if (toProcess.length === 0) {
+      return res.sendError(400, 'No image data provided. Send base64 dataUrl in "image" or "images" field.', null, 'MISSING_IMAGE');
+    }
+
+    const savedUrls = [];
+    for (const item of toProcess) {
+      if (typeof item === 'string') {
+        if (item.startsWith('data:image/')) {
+          const url = saveBase64Image(item);
+          if (url) savedUrls.push(url);
+        } else if (!item.startsWith('blob:')) {
+          savedUrls.push(item);
+        }
+      }
+    }
+
+    if (savedUrls.length === 0) {
+      return res.sendError(400, 'Invalid image data. Please provide base64 data URL (data:image/...).', null, 'INVALID_IMAGE');
+    }
+
+    res.status(201).json({
+      success: true,
+      url: savedUrls[0],
+      urls: savedUrls
     });
   } catch (error) {
     next(error);

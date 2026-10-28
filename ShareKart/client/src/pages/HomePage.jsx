@@ -114,33 +114,18 @@ export const HomePage = ({
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const res = await api.getProducts({
-        type: activeTab !== "all" ? activeTab : "",
-        location: currentLocation || "",
-        maxDistance: 10,
-      });
-      if (res?.success && res.products) {
-        setApiProducts(res.products || []);
-        setNearbySuggestions(res.nearbySuggestions || []);
-        setNearestLocations(res.nearestLocations || []);
-      } else {
-        const local = filterProducts ? filterProducts({
-          type: activeTab !== "all" ? activeTab : "",
-          location: currentLocation || "",
-          maxDistance: 10,
-        }) : { products: [], nearbySuggestions: [] };
-        setApiProducts(local.products || []);
-        setNearbySuggestions(local.nearbySuggestions || []);
-      }
-    } catch (err) {
-      console.warn("API products load fallback to context", err);
+      // Load products directly from initialData via MarketplaceContext
       const local = filterProducts ? filterProducts({
         type: activeTab !== "all" ? activeTab : "",
         location: currentLocation || "",
         maxDistance: 10,
-      }) : { products: [], nearbySuggestions: [] };
+      }) : { products: contextProducts || [], nearbySuggestions: [] };
+
       setApiProducts(local.products || []);
       setNearbySuggestions(local.nearbySuggestions || []);
+    } catch (err) {
+      console.warn("Product load fallback to initialData", err);
+      setApiProducts(contextProducts || []);
     } finally {
       setLoading(false);
     }
@@ -169,6 +154,8 @@ export const HomePage = ({
     })
     .map(formatProduct)
     .filter(Boolean);
+
+  const aroundYouProducts = displayedProducts.slice(0, 4);
 
   return (
     <div className="flex flex-col w-full -mt-2 sm:-mt-4">
@@ -537,8 +524,8 @@ export const HomePage = ({
                 </span>
               </div>
               <p className="font-body-md text-body-md text-on-surface-variant mt-space-2">
-                {displayedProducts.length > 0
-                  ? `Verified products available near ${currentLocation || "you"} (${displayedProducts.length} items).`
+                {aroundYouProducts.length > 0
+                  ? `Verified products available near ${currentLocation || "you"}.`
                   : `No items listed directly in ${currentLocation || "your area"}. Showing nearest locations.`}
               </p>
             </div>
@@ -601,7 +588,7 @@ export const HomePage = ({
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-16">
-            {displayedProducts.map((product) => {
+            {aroundYouProducts.map((product) => {
               const isFav = !!favorites[product.id];
               return (
                 <div
@@ -678,6 +665,19 @@ export const HomePage = ({
               );
             })}
           </div>
+
+          {displayedProducts.length > 4 && (
+            <div className="mt-space-24 text-center">
+              <button
+                onClick={() => onNavigate("search")}
+                className="inline-flex items-center gap-2 bg-surface-container-lowest hover:bg-surface-container text-on-surface font-label-bold px-5 py-2.5 rounded-lg border border-outline-variant/50 shadow-xs transition-colors cursor-pointer text-body-sm"
+              >
+                <span>View all products ({displayedProducts.length})</span>
+                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+              </button>
+            </div>
+          )}
+
         </div>
       </section>
 

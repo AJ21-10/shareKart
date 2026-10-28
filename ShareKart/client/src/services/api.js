@@ -1,3 +1,5 @@
+import { INITIAL_PRODUCTS } from '../data/initialData';
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 
 const getAuthHeaders = () => {
@@ -95,24 +97,52 @@ export const api = {
 
   // Products
   async getProducts(params = {}) {
-    const defaultLoc = localStorage.getItem('sharekart_current_location') || 'Gandhinagar, Sector 7';
-    const queryPayload = {
-      location: defaultLoc,
-      ...params,
-    };
-    Object.keys(queryPayload).forEach((k) => {
-      if (queryPayload[k] === '' || queryPayload[k] === null || queryPayload[k] === undefined) {
-        delete queryPayload[k];
+    try {
+      const defaultLoc = localStorage.getItem('sharekart_current_location') || 'Gandhinagar, Sector 7';
+      const queryPayload = {
+        location: defaultLoc,
+        ...params,
+      };
+      Object.keys(queryPayload).forEach((k) => {
+        if (queryPayload[k] === '' || queryPayload[k] === null || queryPayload[k] === undefined) {
+          delete queryPayload[k];
+        }
+      });
+      const queryString = new URLSearchParams(queryPayload).toString();
+      const res = await fetch(`${API_BASE}/products?${queryString}`);
+      const data = await handleResponse(res);
+      if (data?.success && Array.isArray(data.products)) {
+        const apiIds = new Set(data.products.map(p => p.id));
+        const extraInitial = (INITIAL_PRODUCTS || []).filter(p => !apiIds.has(p.id));
+        return {
+          ...data,
+          products: [...data.products, ...extraInitial]
+        };
       }
-    });
-    const queryString = new URLSearchParams(queryPayload).toString();
-    const res = await fetch(`${API_BASE}/products?${queryString}`);
-    return handleResponse(res);
+      return data;
+    } catch (err) {
+      console.warn('api.getProducts fallback to initialData', err);
+      return { success: true, products: INITIAL_PRODUCTS, count: (INITIAL_PRODUCTS || []).length };
+    }
   },
 
   async getProductById(id) {
-    const res = await fetch(`${API_BASE}/products/${id}`);
-    return handleResponse(res);
+    const cleanId = String(id).replace(/^[#\s]*SK-?/i, "").trim();
+    const numId = Number(cleanId);
+    try {
+      const res = await fetch(`${API_BASE}/products/${cleanId}`);
+      const data = await handleResponse(res);
+      if (data?.success && data.product) {
+        return data;
+      }
+    } catch (err) {
+      console.warn('api.getProductById fallback to initialData', err);
+    }
+    const found = (INITIAL_PRODUCTS || []).find(p => p.id === numId || String(p.id) === String(id) || String(p.id) === cleanId);
+    if (found) {
+      return { success: true, product: found };
+    }
+    throw new Error(`Product not found for ID ${id}`);
   },
 
   async createProduct(productData) {

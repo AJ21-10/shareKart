@@ -1,5 +1,5 @@
 import express from 'express';
-import { getProducts, getProductById, createProduct, updateProduct } from '../controllers/productController.js';
+import { getProducts, getProductById, createProduct, updateProduct, uploadProductImage } from '../controllers/productController.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validator.js';
 
@@ -47,6 +47,7 @@ const updateProductRules = {
 };
 
 router.get('/', getProducts);
+router.post('/upload', authenticateToken, uploadProductImage);
 router.get('/:id', getProductById);
 router.post('/', authenticateToken, validateBody(createProductRules), createProduct);
 router.put('/:id', authenticateToken, validateBody(updateProductRules), updateProduct);

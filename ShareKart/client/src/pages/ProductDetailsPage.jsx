@@ -4,6 +4,25 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useMarketplace } from '../context/MarketplaceContext';
 
+const DEFAULT_REVIEWS = [
+  {
+    id: 'rev-1',
+    user_name: 'Rahul Sharma',
+    user_avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Rahul&backgroundColor=b6e3f4',
+    rental_context: 'Rented for 3 days • Verified Return',
+    rating: 5,
+    comment: 'Super smooth handover! Product condition matched exactly as described. Fully sanitized and 100% functional.'
+  },
+  {
+    id: 'rev-2',
+    user_name: 'Pooja Verma',
+    user_avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Pooja&backgroundColor=ffd5dc',
+    rental_context: 'Rented for weekend • Verified Citizen',
+    rating: 5,
+    comment: 'Host was punctual and helpful. Return via OTP handover pass was instant. Great experience on ShareKart.'
+  }
+];
+
 export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onOpenAadhaarVerification, onToast }) => {
   const { user } = useAuth();
   const { addToCart } = useCart();
@@ -31,31 +50,37 @@ export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onOp
 
   const loadProduct = async () => {
     setLoading(true);
+    // 1. Direct load from initialData.js via MarketplaceContext
+    const initialProduct = getProductById(productId);
+    if (initialProduct) {
+      setProduct(initialProduct);
+      setReviews(
+        initialProduct.reviews && initialProduct.reviews.length > 0
+          ? initialProduct.reviews
+          : DEFAULT_REVIEWS
+      );
+      if (initialProduct.transaction_type === 'buy') {
+        setPricingMode('buy');
+      }
+      setLoading(false);
+      return;
+    }
+
+    // 2. Fallback to API if not in initialData
     try {
       const res = await api.getProductById(productId);
       if (res.success && res.product) {
         setProduct(res.product);
-        setReviews(res.reviews || []);
+        setReviews(res.reviews && res.reviews.length > 0 ? res.reviews : DEFAULT_REVIEWS);
         if (res.product.transaction_type === 'buy') {
           setPricingMode('buy');
         }
-        setLoading(false);
-        return;
       }
     } catch (err) {
       console.warn('API getProductById error, fallback to context', err);
+    } finally {
+      setLoading(false);
     }
-
-    // Context fallback for custom or newly added products in initialData
-    const fallbackProduct = getProductById(productId);
-    if (fallbackProduct) {
-      setProduct(fallbackProduct);
-      setReviews(fallbackProduct.reviews || []);
-      if (fallbackProduct.transaction_type === 'buy') {
-        setPricingMode('buy');
-      }
-    }
-    setLoading(false);
   };
 
   const calculateCost = async () => {
