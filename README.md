@@ -179,8 +179,9 @@ cd server; npm install; cd ..
 
 ## Step 4: Environment Variables Setup (.env)
 
-    Simply download the file form given drive link past on given location
-    Drive Link : [ENV](https://drive.google.com/drive/folders/1O25Jhng4iIplMe1Hz4rDobqFoA0UV0GB?usp=sharing)
+   Download the file from the given drive link and place it in the given location
+
+#### Drive Link : [ENV] (`https://drive.google.com/drive/folders/1O25Jhng4iIplMe1Hz4rDobqFoA0UV0GB?usp=sharing`)
 
 ### 1. Server Environment (`ShareKart/server/.env`)
 
