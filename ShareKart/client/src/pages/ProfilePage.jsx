@@ -606,9 +606,9 @@ export const ProfilePage = ({
   );
 
   return (
-    <div className="py-4 md:py-8 max-w-5xl mx-auto flex flex-col gap-6">
+    <div className="py-4 md:py-2 max-w-5xl mx-auto flex flex-col gap-6">
       {/* Top Banner / Header Card */}
-      <div className="bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/60 overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/60 overflow-hidden ">
         {/* Decorative Top Accent Banner */}
         <div className="h-28 sm:h-36 bg-gradient-to-r from-primary via-primary-container to-secondary/80 relative">
           <div className="absolute top-4 right-4 flex items-center gap-2">
@@ -1029,10 +1029,14 @@ export const ProfilePage = ({
                         className="inline-flex items-center gap-1 text-[11px] font-label-bold text-secondary hover:underline cursor-pointer disabled:opacity-50"
                         title="Use device GPS to detect location"
                       >
-                        <span className={`material-symbols-outlined text-[13px] ${detectingLoc ? 'animate-spin' : ''}`}>
-                          {detectingLoc ? 'progress_activity' : 'my_location'}
+                        <span
+                          className={`material-symbols-outlined text-[13px] ${detectingLoc ? "animate-spin" : ""}`}
+                        >
+                          {detectingLoc ? "progress_activity" : "my_location"}
                         </span>
-                        <span>{detectingLoc ? 'Detecting...' : 'Use Current Loc'}</span>
+                        <span>
+                          {detectingLoc ? "Detecting..." : "Use Current Loc"}
+                        </span>
                       </button>
                     </div>
                     <div className="relative flex items-center">
@@ -1052,7 +1056,9 @@ export const ProfilePage = ({
                     </div>
                     {locStatus && (
                       <span className="text-[11px] text-secondary flex items-center gap-1 mt-0.5">
-                        <span className="material-symbols-outlined text-[13px]">info</span>
+                        <span className="material-symbols-outlined text-[13px]">
+                          info
+                        </span>
                         <span>{locStatus}</span>
                       </span>
                     )}
