@@ -181,7 +181,7 @@ cd server; npm install; cd ..
 
    Download the file from the given drive link and place it in the given location
 
-#### Drive Link : [ENV] (`https://drive.google.com/drive/folders/1O25Jhng4iIplMe1Hz4rDobqFoA0UV0GB?usp=sharing`)
+#### Drive Link : [ENV](https://drive.google.com/drive/folders/1O25Jhng4iIplMe1Hz4rDobqFoA0UV0GB?usp=sharing).
 
 ### 1. Server Environment (`ShareKart/server/.env`)
 
