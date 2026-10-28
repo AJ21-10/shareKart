@@ -41,6 +41,8 @@ async function runPostgresMigration() {
         }
   );
 
+  //this is comment
+
   console.log('Connecting to PostgreSQL database...');
 
   try {
