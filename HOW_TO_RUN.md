@@ -1,105 +1,136 @@
-# 🛒 ShareKart - Setup & Getting Started Guide
+# 🛒 ShareKart - Complete Setup & Installation Guide
 
-A complete step-by-step guide to clone, configure, and run **ShareKart** (Hyperlocal Peer-to-Peer Sharing & Rental Platform) on **Windows**, **macOS**, and **Linux**.
+A comprehensive, step-by-step guide to install prerequisites (Node.js, npm, Git), configure environment variables, and run **ShareKart** (Hyperlocal Peer-to-Peer Sharing & Rental Platform) on **Windows**, **macOS**, and **Linux**.
 
 ---
 
 ## 📑 Table of Contents
 
-1. [Project Overview & Architecture](#-project-overview--architecture)
-2. [Prerequisites (What you need)](#-prerequisites-what-you-need)
-   - [Windows Installation](#windows-setup)
-   - [macOS Installation](#macos-setup)
-   - [Linux Installation](#linux-setup)
-3. [Step 1: Clone the Repository](#step-1-clone-the-repository)
-4. [Step 2: Project Structure](#step-2-project-structure)
-5. [Step 3: Install Dependencies](#step-3-install-dependencies)
-6. [Step 4: Environment Variables Setup (.env)](#step-4-environment-variables-setup-env)
-7. [Step 5: Database Setup & Seeding](#step-5-database-setup--seeding)
-8. [Step 6: Running the Application](#step-6-running-the-application)
-9. [Operating System Cheatsheets](#-operating-system-cheatsheets)
-   - [Windows (PowerShell)](#windows-powershell-one-shot)
-   - [macOS (Terminal)](#macos-terminal-one-shot)
-   - [Linux (Bash)](#linux-bash-one-shot)
-10. [Default Demo User Logins](#-default-demo-user-logins)
-11. [Troubleshooting & Common Issues](#-troubleshooting--common-issues)
+1. [Prerequisites Installation (Node.js, npm & Git)](#-prerequisites-installation)
+   - [Windows Setup](#1-windows-setup)
+   - [macOS Setup](#2-macos-setup)
+   - [Linux Setup (Ubuntu / Debian / Fedora / Arch)](#3-linux-setup)
+2. [Step 1: Clone the Repository](#step-1-clone-the-repository)
+3. [Step 2: Project Structure Overview](#step-2-project-structure-overview)
+4. [Step 3: Install Dependencies](#step-3-install-dependencies)
+5. [Step 4: Automatic 1-Click Environment Setup (.env)](#step-4-automatic-1-click-environment-setup-env)
+6. [Step 5: Database & Image Sync (Supabase)](#step-5-database--image-sync-supabase)
+7. [Step 6: Running the Application](#step-6-running-the-application)
+8. [Operating System Quick Cheatsheets](#-operating-system-quick-cheatsheets)
+   - [Windows (PowerShell)](#windows-powershell-quick-start)
+   - [macOS (Terminal)](#macos-terminal-quick-start)
+   - [Linux (Bash)](#linux-bash-quick-start)
+9. [Default Demo User Logins](#-default-demo-user-logins)
+10. [Troubleshooting & FAQs](#-troubleshooting--faqs)
 
 ---
 
-## 🏗 Project Overview & Architecture
+## 📦 Prerequisites Installation
 
-ShareKart has a clean modular full-stack architecture:
-
-- **Frontend (`/ShareKart/client`)**: React 18, Vite, TailwindCSS, Material Symbols.
-  - Default URL: `http://localhost:3000`
-- **Backend API (`/ShareKart/server`)**: Node.js, Express, JWT Authentication, RESTful APIs.
-  - Default URL: `http://localhost:5000`
-- **Database (`/ShareKart/server/database`)**: PostgreSQL / Supabase cloud database with schema and mock seed.
-- **Data Catalog (`/ShareKart/client/src/data/initialData.js`)**: Built-in rich offline catalog (Air fryers, MacBooks, Sony cameras, Bosch drills, etc.) that works even without backend!
+Before running ShareKart, you need three core tools on your computer:
+1. **Git** (to download and update the project)
+2. **Node.js** (v18.x or **v20.x LTS** recommended)
+3. **npm** (automatically bundled with Node.js)
 
 ---
 
-## 📦 Prerequisites (What you need)
+### 1. Windows Setup
 
-Before running the project, make sure you have:
+#### Step A: Install Git
+1. Download Git installer from [git-scm.com/download/win](https://git-scm.com/download/win).
+2. Run the `.exe` installer. Use the default recommended options and complete the installation.
 
-1. **Git** (to clone the repo)
-2. **Node.js** (v18.x or v20.x LTS recommended)
-3. **npm** (bundled automatically with Node.js)
+#### Step B: Install Node.js & npm
+You can choose either of these methods:
 
-### Windows Setup
+* **Method 1: Official Installer (Recommended)**
+  1. Visit the official Node.js website: [nodejs.org](https://nodejs.org/).
+  2. Click on the **LTS** version (e.g. `v20.x.x LTS`) to download the Windows `.msi` installer.
+  3. Run the installer and check the box to *"Automatically install the necessary tools"* if prompted.
+  4. Follow the setup wizard and click **Finish**.
 
-1. **Install Git**: Download and run installer from [git-scm.com/download/win](https://git-scm.com/download/win).
-2. **Install Node.js**: Download and install **LTS version** from [nodejs.org](https://nodejs.org/).
-3. Verify in Command Prompt (`cmd`) or PowerShell:
-   ```powershell
-   git --version
-   node -v
-   npm -v
-   ```
+* **Method 2: Via Windows Package Manager (`winget`)**
+  Open PowerShell as Administrator and run:
+  ```powershell
+  winget install OpenJS.NodeJS.LTS
+  ```
 
-### macOS Setup
+#### Step C: Verify Installation on Windows
+Close any open terminal windows, open a **new** Command Prompt (`cmd`) or **PowerShell**, and run:
+```powershell
+git --version
+node -v
+npm -v
+```
+*(You should see output like `node: v20.x.x` and `npm: 10.x.x`)*.
 
-1. Open Terminal and install [Homebrew](https://brew.sh) (if not already installed):
-   ```bash
-   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-   ```
-2. Install Git and Node.js:
-   ```bash
-   brew install git node@20
-   ```
-3. Verify in Terminal:
-   ```bash
-   git --version
-   node -v
-   npm -v
-   ```
+---
 
-### Linux Setup (Ubuntu / Debian)
+### 2. macOS Setup
 
-1. Open terminal and run:
+#### Step A: Install Homebrew (macOS Package Manager)
+If you don't already have Homebrew, open the **Terminal** app and run:
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
 
-   ```bash
-   sudo apt update
-   sudo apt install -y git curl
+#### Step B: Install Git and Node.js
+Using Homebrew in Terminal:
+```bash
+brew install git node@20
+brew link node@20 --force --overwrite
+```
+*(Alternative: You can also download the macOS `.pkg` installer directly from [nodejs.org](https://nodejs.org/)).*
 
-   # Install Node.js v20 LTS via NodeSource
-   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-   sudo apt install -y nodejs
-   ```
+#### Step C: Verify Installation on macOS
+In your Terminal, run:
+```bash
+git --version
+node -v
+npm -v
+```
 
-2. Verify in Terminal:
-   ```bash
-   git --version
-   node -v
-   npm -v
-   ```
+---
+
+### 3. Linux Setup
+
+#### Ubuntu / Debian / Linux Mint:
+Open your terminal and run:
+```bash
+# 1. Update system packages & install curl + git
+sudo apt update
+sudo apt install -y git curl build-essential
+
+# 2. Add NodeSource Node.js v20 LTS repository
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+
+# 3. Install Node.js (npm is included automatically)
+sudo apt install -y nodejs
+```
+
+#### Fedora / RHEL / CentOS Stream:
+```bash
+sudo dnf install -y git curl
+sudo dnf module install -y nodejs:20/common
+```
+
+#### Arch Linux / Manjaro:
+```bash
+sudo pacman -Syu --noconfirm git nodejs npm
+```
+
+#### Verify Installation on Linux:
+```bash
+git --version
+node -v
+npm -v
+```
 
 ---
 
 ## Step 1: Clone the Repository
 
-Open your terminal or command prompt in the folder where you want to keep the project (e.g., `Desktop` or `Projects`):
+Open your terminal or command prompt in your preferred working folder (e.g., `Documents` or `Projects`):
 
 ```bash
 git clone https://github.com/AJ21-10/shareKart.git
@@ -108,32 +139,35 @@ cd shareKart
 
 ---
 
-## Step 2: Project Structure
-
-The project code is organized inside the `ShareKart/` folder:
+## Step 2: Project Structure Overview
 
 ```text
 shareKart/
-├── README.md               <-- Setup documentation
+├── HOW_TO_RUN.md               <-- This setup documentation
+├── README.md                   <-- Project overview & documentation
 └── ShareKart/
-    ├── package.json        <-- Root project scripts
-    ├── client/             <-- React + Vite Frontend
+    ├── package.json            <-- Root orchestration scripts (setup:env, dev:server, dev:client)
+    ├── scripts/
+    │   └── setupEnv.js         <-- 1-Click environment generator
+    ├── client/                 <-- React 18 + Vite Frontend (Port 3000)
     │   ├── package.json
-    │   ├── .env.example
-    │   ├── .env
+    │   ├── .env                <-- Frontend environment
+    │   ├── public/
+    │   │   └── uploads/        <-- Symlinked media folder
     │   └── src/
-    │       ├── data/initialData.js  <-- Local product catalog
-    │       ├── context/             <-- Auth, Cart & Marketplace State
-    │       └── pages/               <-- UI pages (Home, Search, Details)
-    └── server/             <-- Express.js REST API
+    │       ├── data/initialData.js  <-- Local fallback catalog
+    │       └── pages/               <-- UI pages (Home, Search, Details, List)
+    └── server/                 <-- Node.js / Express REST API (Port 5000)
         ├── package.json
-        ├── .env
-        ├── database/       <-- schema.sql & seed.sql
+        ├── .env                <-- Backend environment (Supabase & DB credentials)
+        ├── uploads/            <-- Uploaded product images
+        ├── database/           <-- schema.sql & seed.sql
         └── src/
+            ├── services/storageService.js  <-- Supabase Cloud Storage engine
+            └── utils/syncImagesToSupabase.js
 ```
 
-Navigate into the `ShareKart` folder:
-
+Navigate into the application folder:
 ```bash
 cd ShareKart
 ```
@@ -142,12 +176,9 @@ cd ShareKart
 
 ## Step 3: Install Dependencies
 
-You need to install dependencies for both the **root**, **server**, and **client**.
+You need to install dependencies for the root, frontend client, and backend server.
 
-### Quick method (from `ShareKart/` root):
-
-#### On Linux / macOS / Windows Git Bash:
-
+### For Linux / macOS / Windows Git Bash:
 ```bash
 # 1. Install root dependencies
 npm install
@@ -162,170 +193,184 @@ cd ../server && npm install
 cd ..
 ```
 
-#### On Windows PowerShell:
-
+### For Windows PowerShell:
 ```powershell
-# 1. Install root dependencies
 npm install
-
-# 2. Install client dependencies
 cd client; npm install; cd ..
-
-# 3. Install server dependencies
 cd server; npm install; cd ..
 ```
 
 ---
 
-## Step 4: Environment Variables Setup (.env)
+## Step 4: Automatic 1-Click Environment Setup (.env)
 
-Download the file from the given drive link and place it in the given location
+> 💡 **No Manual Copy-Pasting Required!**
+> You do **not** need to manually download or copy keys from Google Drive or dashboard anymore.
 
-#### Drive Link : [ENV](https://drive.google.com/drive/folders/1O25Jhng4iIplMe1Hz4rDobqFoA0UV0GB?usp=sharing).
+From the `ShareKart/` root folder, run:
 
-### 1. Server Environment (`ShareKart/server/.env`)
+```bash
+npm run setup:env
+```
 
-Create or verify the `.env` file in `ShareKart/server/.env`:
+**What this does automatically:**
+- Generates `ShareKart/server/.env` with the PostgreSQL / Supabase cloud database credentials, JWT secret, Phone Auth keys, and Cloud Storage bucket configuration.
+- Generates `ShareKart/client/.env` with frontend API proxies and Supabase public client keys.
 
-### 2. Client Environment (`ShareKart/client/.env`)
-
-Create or verify the `.env` file in `ShareKart/client/.env`:
+You will see:
+```text
+⚡ Setting up ShareKart Environment Files (.env)...
+✅ Server .env generated at: .../ShareKart/server/.env
+✅ Client .env generated at: .../ShareKart/client/.env
+🎉 Done! Server and Client are now 100% configured with Supabase.
+```
 
 ---
 
-## Step 5: Database Setup & Seeding
+## Step 5: Database & Image Sync (Supabase)
 
-> **Note**: ShareKart has a rich offline fallback catalog in `initialData.js`. Even if the database is offline, the frontend will work 100% fine!
+ShareKart is connected to a live cloud Supabase database and storage bucket.
 
-If you want to run the database migration and seed data into PostgreSQL / Supabase:
-
-From `ShareKart/` root:
-
+### 1. Database Schema & Mock Seed (Optional)
+If you are connecting to a fresh database or want to re-seed demo data:
 ```bash
+# From ShareKart/ folder:
 npm run seed
 ```
 
-Or from `ShareKart/server/`:
-
+### 2. Syncing Product Images to Cloud Storage
+If you have local product images in `server/uploads/` and want to ensure they are synchronized with the Supabase Cloud Storage bucket (`product-images`):
 ```bash
 cd server
-npm run seed
+npm run sync:images
+cd ..
 ```
-
-This executes `schema.sql` and `seed.sql`, creating tables for users, products, categories, rentals, disputes, and reviews.
 
 ---
 
 ## Step 6: Running the Application
 
-You need **two terminal tabs/windows**: one for the Backend Server and one for the Frontend Client.
+To run the complete application, you need **two terminal tabs/windows**:
+- **Terminal 1**: Backend REST API (`http://localhost:5000`)
+- **Terminal 2**: Frontend Client (`http://localhost:3000`)
 
-### Terminal 1: Backend Server (Port 5000)
+---
 
-From `ShareKart/` directory:
+### Terminal 1: Start Backend Server (Port 5000)
+
+Navigate to `ShareKart/` and run:
 
 ```bash
 npm run dev:server
 ```
+*(Or navigate to `cd server && npm run dev`)*
 
-_(Or `cd server && npm run dev`)_
-
-You will see:
-
+You should see:
 ```text
 ShareKart server running on port 5000
-Database connected successfully
+[Database] ✅ PostgreSQL Connected: "postgres"
 ```
 
 ---
 
-### Terminal 2: Frontend Client (Port 3000)
+### Terminal 2: Start Frontend Client (Port 3000)
 
-Open a **new terminal tab/window**, navigate to `ShareKart/`:
+Open a **second terminal tab/window**, navigate to `ShareKart/`, and run:
 
 ```bash
 npm run dev:client
 ```
+*(Or navigate to `cd client && npm run dev`)*
 
-_(Or `cd client && npm run dev`)_
-
-You will see:
-
+You should see:
 ```text
   VITE v5.4.11  ready in 240 ms
 
   ➜  Local:   http://localhost:3000/
-  ➜  Network: http://192.168.x.x:3000/
+  ➜  Network: use --host to expose
 ```
 
-Now open your web browser and go to:
+Now open your browser and navigate to:
 👉 **[http://localhost:3000](http://localhost:3000)**
 
 ---
 
-## 💻 Operating System Cheatsheets
+## 💻 Operating System Quick Cheatsheets
 
-### Windows (PowerShell) One-Shot
+### Windows (PowerShell) Quick Start
 
-Run these commands in Windows PowerShell:
+Copy and paste these commands into PowerShell:
 
 ```powershell
-# 1. Clone repository
+# 1. Clone & enter project
 git clone https://github.com/AJ21-10/shareKart.git
 cd shareKart/ShareKart
 
-# 2. Install all packages
+# 2. Install all dependencies
 npm install
 cd client; npm install; cd ..
 cd server; npm install; cd ..
 
-# 3. Start Backend in new window
+# 3. Generate .env files automatically
+npm run setup:env
+
+# 4. Launch Backend in a separate window
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD/server'; npm run dev"
 
-# 4. Start Frontend in current window
+# 5. Launch Frontend in this window
 cd client
 npm run dev
 ```
 
-### macOS (Terminal) One-Shot
+---
 
-Run these commands in macOS Terminal:
+### macOS (Terminal) Quick Start
+
+Copy and paste these commands into Terminal:
 
 ```bash
-# 1. Clone repository
+# 1. Clone & enter project
 git clone https://github.com/AJ21-10/shareKart.git
 cd shareKart/ShareKart
 
-# 2. Install all packages
+# 2. Install all dependencies
 npm install
 (cd client && npm install)
 (cd server && npm install)
 
-# 3. Start Backend in background or separate tab
-cd server && npm run dev &
+# 3. Generate .env files automatically
+npm run setup:env
 
-# 4. Start Frontend
-cd ../client && npm run dev
-```
-
-### Linux (Bash) One-Shot
-
-Run these commands in Linux Terminal:
-
-```bash
-# 1. Clone repository
-git clone https://github.com/AJ21-10/shareKart.git
-cd shareKart/ShareKart
-
-# 2. Install all packages
-npm install
-(cd client && npm install)
-(cd server && npm install)
-
-# 3. Start Backend in background or separate terminal
+# 4. Launch Backend in background
 (cd server && npm run dev) &
 
-# 4. Start Frontend
+# 5. Launch Frontend
+cd client && npm run dev
+```
+
+---
+
+### Linux (Bash) Quick Start
+
+Copy and paste these commands into Linux Terminal:
+
+```bash
+# 1. Clone & enter project
+git clone https://github.com/AJ21-10/shareKart.git
+cd shareKart/ShareKart
+
+# 2. Install all dependencies
+npm install
+(cd client && npm install)
+(cd server && npm install)
+
+# 3. Generate .env files automatically
+npm run setup:env
+
+# 4. Launch Backend in background
+(cd server && npm run dev) &
+
+# 5. Launch Frontend
 cd client && npm run dev
 ```
 
@@ -333,7 +378,7 @@ cd client && npm run dev
 
 ## 👥 Default Demo User Logins
 
-When testing login, authentication, and rental escrow features, you can use these pre-seeded accounts:
+When testing login, authentication, and rental escrow features, use these pre-seeded accounts:
 
 | Role / Name      | Email                 | Password      | Details                                    |
 | ---------------- | --------------------- | ------------- | ------------------------------------------ |
@@ -344,62 +389,55 @@ When testing login, authentication, and rental escrow features, you can use thes
 
 ---
 
-## 🛠 Troubleshooting & Common Issues
+## 🛠 Troubleshooting & FAQs
 
 ### 1. Port 3000 or 5000 Already In Use (`EADDRINUSE`)
+If port 5000 or 3000 is occupied by another process:
 
-- **Windows**:
+* **On Windows (PowerShell)**:
   ```powershell
   # Find PID using port 5000 or 3000
   netstat -ano | findstr :5000
-  # Kill task by PID
+  # Kill process by PID
   taskkill /PID <PID_NUMBER> /F
   ```
-- **macOS / Linux**:
+* **On macOS / Linux**:
   ```bash
-  # Kill whatever is running on port 5000 or 3000
-  lsof -ti:5000 | xargs kill -9
-  lsof -ti:3000 | xargs kill -9
+  lsof -ti:5000 | xargs kill -9 2>/dev/null
+  lsof -ti:3000 | xargs kill -9 2>/dev/null
   ```
 
-### 2. PowerShell Script Execution Disabled (Windows)
+---
 
-If you see `File ... cannot be loaded because running scripts is disabled on this system`:
-Run PowerShell as Administrator and run:
+### 2. Images Not Loading or Broken Icons
+- Run `npm run setup:env` in the `ShareKart/` directory to ensure `SUPABASE_STORAGE_BUCKET=product-images` is set.
+- Make sure **both** Backend (`npm run dev:server`) and Frontend (`npm run dev:client`) are running simultaneously.
+- If you have missing local images, run `cd server && npm run sync:images` to sync existing images to your Supabase Cloud Storage.
 
+---
+
+### 3. Windows PowerShell Script Execution Disabled
+If you see the error:
+`File ... cannot be loaded because running scripts is disabled on this system`
+
+Run this command in PowerShell to allow script execution:
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
-### 3. Node Version Incompatibility
+---
 
-If you see unexpected syntax or module errors, make sure you are using Node.js v18 or v20+:
-
-```bash
-node -v
-```
-
-Use [nvm](https://github.com/nvm-sh/nvm) (macOS/Linux) or [nvm-windows](https://github.com/coreybutler/nvm-windows) (Windows) if you need to switch versions:
-
-```bash
-nvm install 20
-nvm use 20
-```
-
-### 4. Running Frontend Without Backend (Standalone Mode)
-
-If you only want to design, develop UI, test products, or work on frontend:
-
-```bash
-cd ShareKart/client
-npm run dev
-```
-
-All catalog products (including `#SK-6 Philips Air Fryer`, MacBook, Sony Camera, etc.) will automatically load from `src/data/initialData.js` and localStorage without needing the backend server.
+### 4. Node Version Warning
+ShareKart runs best on **Node.js v18.x or v20.x LTS**. If you have an older version:
+- Check your current version: `node -v`
+- Upgrade Node.js using [nvm](https://github.com/nvm-sh/nvm) (macOS/Linux) or [nvm-windows](https://github.com/coreybutler/nvm-windows) (Windows):
+  ```bash
+  nvm install 20
+  nvm use 20
+  ```
 
 ---
 
 ## 🤝 Need Help?
-
-- Repo: [https://github.com/AJ21-10/shareKart](https://github.com/AJ21-10/shareKart)
-- For issues, open a GitHub Issue or reach out to the project maintainers.
+- **GitHub Repository**: [https://github.com/AJ21-10/shareKart](https://github.com/AJ21-10/shareKart)
+- Feel free to open an Issue or ask the maintainers for assistance.
