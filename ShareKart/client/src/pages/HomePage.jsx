@@ -64,7 +64,7 @@ export const HomePage = ({
       ? `${p.distance_km} km away`
       : p.location || p.location_name || "Gandhinagar";
 
-    const image = p.images?.[0] || p.image || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80";
+    const image = p.images?.[0] || p.image || "";
     const subBadge = p.condition || p.condition_tag || (isBuy ? "Pre-owned" : "Instant Pickup");
     const rating = p.seller_rating || (p.reviews?.length ? "4.9" : null);
 
@@ -597,12 +597,19 @@ export const HomePage = ({
                   className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between cursor-pointer border border-outline-variant/30 group"
                 >
                   <div>
-                    <div className="relative w-full h-44 bg-surface-container overflow-hidden">
-                      <img
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                        alt={product.title}
-                        src={product.image}
-                      />
+                    <div className="relative w-full h-44 bg-surface-container overflow-hidden flex items-center justify-center">
+                      {product.image ? (
+                        <img
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          alt={product.title}
+                          src={product.image}
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-on-surface-variant/50">
+                          <span className="material-symbols-outlined text-[36px]">broken_image</span>
+                          <span className="text-[11px] font-medium mt-1">No Photo</span>
+                        </div>
+                      )}
                       <span
                         className={`absolute top-2 left-2 px-space-8 py-space-2 rounded font-badge text-badge ${product.badgeColor}`}
                       >

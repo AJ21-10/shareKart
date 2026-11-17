@@ -459,11 +459,18 @@ export const SearchPage = ({ initialFilters = {}, onNavigate, onToast }) => {
                         onClick={() => onNavigate('product', { id: product.id })}
                         className="bg-surface-container-lowest rounded-xl p-2.5 sm:p-space-12 border border-outline-variant/60 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col sm:flex-row gap-3 sm:gap-space-16 items-start"
                       >
-                        <img
-                          src={Array.isArray(product.images) ? product.images[0] : ''}
-                          alt={product.title}
-                          className="w-full sm:w-44 h-40 sm:h-36 object-cover rounded-lg bg-surface-container shrink-0"
-                        />
+                        {Array.isArray(product.images) && product.images[0] ? (
+                          <img
+                            src={product.images[0]}
+                            alt={product.title}
+                            className="w-full sm:w-44 h-40 sm:h-36 object-cover rounded-lg bg-surface-container shrink-0"
+                          />
+                        ) : (
+                          <div className="w-full sm:w-44 h-40 sm:h-36 flex flex-col items-center justify-center rounded-lg bg-surface-container shrink-0 text-on-surface-variant/50">
+                            <span className="material-symbols-outlined text-[32px]">broken_image</span>
+                            <span className="text-[11px] font-medium mt-1">No Photo</span>
+                          </div>
+                        )}
                         <div className="flex-1 flex flex-col justify-between w-full min-w-0 h-full">
                           <div>
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -540,11 +547,18 @@ export const SearchPage = ({ initialFilters = {}, onNavigate, onToast }) => {
                   onClick={() => onNavigate('product', { id: product.id })}
                   className="bg-surface-container-lowest rounded-xl p-2.5 sm:p-space-12 border border-outline-variant/60 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col sm:flex-row gap-3 sm:gap-space-16 items-start"
                 >
-                  <img
-                    src={Array.isArray(product.images) ? product.images[0] : ''}
-                    alt={product.title}
-                    className="w-full sm:w-44 h-40 sm:h-36 object-cover rounded-lg bg-surface-container shrink-0"
-                  />
+                  {Array.isArray(product.images) && product.images[0] ? (
+                    <img
+                      src={product.images[0]}
+                      alt={product.title}
+                      className="w-full sm:w-44 h-40 sm:h-36 object-cover rounded-lg bg-surface-container shrink-0"
+                    />
+                  ) : (
+                    <div className="w-full sm:w-44 h-40 sm:h-36 flex flex-col items-center justify-center rounded-lg bg-surface-container shrink-0 text-on-surface-variant/50">
+                      <span className="material-symbols-outlined text-[32px]">broken_image</span>
+                      <span className="text-[11px] font-medium mt-1">No Photo</span>
+                    </div>
+                  )}
                   <div className="flex-1 flex flex-col justify-between w-full min-w-0 h-full">
                     <div>
                       <div className="flex items-center gap-2 mb-1 flex-wrap">

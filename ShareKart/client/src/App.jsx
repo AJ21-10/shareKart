@@ -135,7 +135,8 @@ export function AppContent() {
   // Aadhaar Prompt Modal State
   const [aadhaarModalOpen, setAadhaarModalOpen] = useState(false);
   const [aadhaarModalReason, setAadhaarModalReason] = useState("general");
-  const [pendingActionAfterAadhaar, setPendingActionAfterAadhaar] = useState(null);
+  const [pendingActionAfterAadhaar, setPendingActionAfterAadhaar] =
+    useState(null);
 
   const triggerAadhaarModal = (reason = "general", callback = null) => {
     setAadhaarModalReason(reason);
@@ -247,7 +248,8 @@ export function AppContent() {
           setCurrentPage("list-item");
           setPageParams(targetParams);
           const p = "/list-item";
-          if (window.location.pathname !== p) window.history.pushState(targetParams, "", p);
+          if (window.location.pathname !== p)
+            window.history.pushState(targetParams, "", p);
           window.scrollTo({ top: 0, behavior: "smooth" });
         });
         return;
@@ -263,7 +265,8 @@ export function AppContent() {
           setCurrentPage("checkout");
           setPageParams(targetParams);
           const p = "/checkout";
-          if (window.location.pathname !== p) window.history.pushState(targetParams, "", p);
+          if (window.location.pathname !== p)
+            window.history.pushState(targetParams, "", p);
           window.scrollTo({ top: 0, behavior: "smooth" });
         });
         return;
@@ -509,7 +512,6 @@ export function AppContent() {
       {toastMessage && (
         <Toast message={toastMessage} onClose={() => setToastMessage("")} />
       )}
-
     </div>
   );
 }
@@ -535,9 +537,12 @@ class ErrorBoundary extends React.Component {
           <div className="w-16 h-16 rounded-full bg-error-container/30 flex items-center justify-center text-error mb-4">
             <span className="material-symbols-outlined text-4xl">error</span>
           </div>
-          <h1 className="text-xl font-bold text-on-surface mb-2">Something went wrong</h1>
+          <h1 className="text-xl font-bold text-on-surface mb-2">
+            Something went wrong
+          </h1>
           <p className="text-sm text-on-surface-variant max-w-md mb-6">
-            An unexpected display error occurred. Please reload to refresh the marketplace.
+            An unexpected display error occurred. Please reload to refresh the
+            marketplace.
           </p>
           <div className="flex gap-3">
             <button

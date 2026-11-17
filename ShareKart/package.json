@@ -1,8 +1,10 @@
 {
   "name": "sharekart-fullstack",
   "version": "1.0.0",
+  "type": "module",
   "description": "Sharekart - Hyperlocal P2P Sharing & Rental Network",
   "scripts": {
+    "setup:env": "node scripts/setupEnv.js",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
     "seed": "cd server && npm run seed",

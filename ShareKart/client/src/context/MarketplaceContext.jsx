@@ -29,12 +29,10 @@ export const MarketplaceProvider = ({ children }) => {
           if (!p) return null;
           const cleanedImages = Array.isArray(p.images)
             ? p.images.filter(img => typeof img === 'string' && !img.startsWith('blob:'))
-            : [];
+            : (p.image && !p.image.startsWith('blob:') ? [p.image] : []);
           return {
             ...p,
-            images: cleanedImages.length > 0 ? cleanedImages : [
-              p.image && !p.image.startsWith('blob:') ? p.image : 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80'
-            ]
+            images: cleanedImages
           };
         })
         .filter(Boolean);

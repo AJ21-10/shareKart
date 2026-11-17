@@ -4,7 +4,7 @@ export const ProductCard = ({ product, onSelectProduct, onQuickRent, onQuickBuy,
   const [wishlisted, setWishlisted] = useState(false);
 
   const images = Array.isArray(product.images) ? product.images : [];
-  const thumbnail = images[0] || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400&auto=format&fit=crop&q=80';
+  const thumbnail = images[0] || '';
   const isRent = product.transaction_type === 'rent' || product.transaction_type === 'both';
   const isSale = product.transaction_type === 'buy';
 
@@ -20,12 +20,19 @@ export const ProductCard = ({ product, onSelectProduct, onQuickRent, onQuickBuy,
       className="bg-surface-container-lowest rounded-xl border border-outline-variant/60 shadow-sm hover:shadow-md hover:border-outline-variant transition-all cursor-pointer flex flex-col justify-between overflow-hidden group"
     >
       {/* Media Canvas 4:3 */}
-      <div className="relative w-full aspect-[4/3] bg-surface-container-low overflow-hidden">
-        <img 
-          src={thumbnail} 
-          alt={product.title} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-        />
+      <div className="relative w-full aspect-[4/3] bg-surface-container-low overflow-hidden flex items-center justify-center">
+        {thumbnail ? (
+          <img 
+            src={thumbnail} 
+            alt={product.title} 
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-surface-container text-on-surface-variant/50">
+            <span className="material-symbols-outlined text-[36px]">broken_image</span>
+            <span className="text-[11px] font-medium mt-1">No Photo</span>
+          </div>
+        )}
 
         {/* Tag Pill: Rent or Sale */}
         <div className="absolute top-space-8 left-space-8 flex items-center gap-1">

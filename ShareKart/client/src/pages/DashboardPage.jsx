@@ -554,11 +554,17 @@ export const DashboardPage = ({ initialTab = "overview", params = {}, onNavigate
                     <tr key={item.id} className="hover:bg-surface-container-low/40 transition-colors">
                       <td className="p-space-12">
                         <div className="flex items-center gap-space-12">
-                          <img
-                            src={Array.isArray(item.images) ? item.images[0] : ""}
-                            alt={item.title}
-                            className="w-12 h-12 rounded-lg object-cover bg-surface-container shrink-0 border border-outline-variant"
-                          />
+                          {Array.isArray(item.images) && item.images[0] ? (
+                            <img
+                              src={item.images[0]}
+                              alt={item.title}
+                              className="w-12 h-12 rounded-lg object-cover bg-surface-container shrink-0 border border-outline-variant"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center shrink-0 border border-outline-variant text-on-surface-variant/40">
+                              <span className="material-symbols-outlined text-[20px]">broken_image</span>
+                            </div>
+                          )}
                           <div className="min-w-0">
                             <p className="font-label-bold text-on-surface truncate max-w-xs font-bold">{item.title}</p>
                             <p className="text-xs text-on-surface-variant font-mono">{item.serial_number || "S/N: 4729188-IN"}</p>

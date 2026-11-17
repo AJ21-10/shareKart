@@ -71,7 +71,7 @@ export const AddProductModal = ({ isOpen, onClose, onProductCreated, onToast }) 
     setLoading(true);
 
     try {
-      const defaultImg = formData.imageUrl.trim() || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80';
+      const customImg = formData.imageUrl.trim();
       
       const payload = {
         ...formData,
@@ -80,7 +80,7 @@ export const AddProductModal = ({ isOpen, onClose, onProductCreated, onToast }) 
         security_deposit: Number(formData.security_deposit) || 0,
         sale_price: Number(formData.sale_price) || 0,
         original_mrp: Number(formData.original_mrp) || 0,
-        images: [defaultImg],
+        images: customImg ? [customImg] : [],
         specs: {
           'Condition': formData.condition_tag,
           'Owner Verified': user?.is_aadhaar_verified ? 'Aadhaar eKYC Verified' : 'Community Host'

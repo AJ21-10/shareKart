@@ -32,23 +32,7 @@ export const ListItemPage = ({ onNavigate, onOpenAadhaarVerification, onToast })
   const [accessoryInput, setAccessoryInput] = useState('');
 
   // Photos
-  const [photos, setPhotos] = useState([
-    {
-      id: 1,
-      url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA3MwnOocyWiZexRTcYF0p-7X91kBdEb9kmojSV52z0kIIOVM-0F2sUxBt9bYXfRwi3w7hz85yR1qyVfgBeotRi7WFY2p8fTT86oaBPUsfpwNc_kMc8KcyC8tzwkFF7ozTYqgJZ-GmOKf9GI4XudEgoknqYITySqOmYD-0KEvlTVFlUCAWDL4g0KwRUlYnYgyXMDidq6m0nzhJM6t1HBlccKH9QSl0andmk8VGJM2vxS91fXJWdT3G2gg',
-      label: 'Cover Photo'
-    },
-    {
-      id: 2,
-      url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBGIhbkG2RfKhwZVLREgl4TnmL90RAri0AeoKSW0Mau749cT5HVvWbhiXzhccHTV1A7DkkqMcB-E7d0neBaOIosfBuHIZUciFNASt-lHdXsvDQpiNYf6n4KDV3MPUal41fI7ecXuUC79nQPsELx0aKvZibRbzfjHr3cILVr7Sq82uPhIY4GuaxwBlPWU1KFs4aY05wSLEBTy6SG3E4dDtehfMM11_BjpgZ4sfoTn3rAovasvwvb2RApgQ',
-      label: ''
-    },
-    {
-      id: 3,
-      url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBDNWrmqD-kUO-zHfo9RsBbfQGeT4XatcGXfwUUuvZbh8ljWQFrPP__NHq2Xjvmo6iBjl39w6yuT-CuqLe82NuiyAQ0X8pRdIJ4xUaHQ9sIXVVdZkxg4mXb_FC4BiY0Ct0BBSSXb3Bthb_mSYrOoaGUpFHHCoWX8ZrGjkhaNkYTNb_iI-JpdFHA-SOknmrNhO40kzNeZMEsxvsorUTCbL6KHYpAecaHMTEL66n-HkLi9I0Ok9e3ssiBjg',
-      label: 'Bill Attached'
-    }
-  ]);
+  const [photos, setPhotos] = useState([]);
 
   // Handover preferences
   const [pickupLocation, setPickupLocation] = useState(

@@ -171,9 +171,7 @@ export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onOp
     );
   }
 
-  const images = Array.isArray(product.images) && product.images.length > 0 ? product.images : [
-    'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80'
-  ];
+  const images = Array.isArray(product.images) && product.images.length > 0 ? product.images : [];
 
   return (
     <div className="w-full flex flex-col gap-3 sm:gap-space-16 pb-16 lg:pb-0">
@@ -200,11 +198,18 @@ export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onOp
           {/* Main Photo Canvas with Thumbnails */}
           <div className="bg-surface-container-lowest p-3 sm:p-space-16 rounded-xl border border-outline-variant/60 shadow-sm flex flex-col gap-3 sm:gap-space-12">
             <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden bg-surface-container-low flex items-center justify-center">
-              <img 
-                src={images[activePhotoIdx]} 
-                alt={product.title} 
-                className="w-full h-full object-cover transition-all duration-300" 
-              />
+              {images[activePhotoIdx] ? (
+                <img 
+                  src={images[activePhotoIdx]} 
+                  alt={product.title} 
+                  className="w-full h-full object-cover transition-all duration-300" 
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-on-surface-variant/50">
+                  <span className="material-symbols-outlined text-[48px]">broken_image</span>
+                  <span className="text-body-sm font-medium mt-1">No Image Available</span>
+                </div>
+              )}
 
               <div className="absolute top-2 sm:top-space-12 left-2 sm:left-space-12 flex items-center gap-1 bg-secondary text-on-secondary text-[10px] sm:text-badge font-badge px-2 sm:px-space-8 py-0.5 sm:py-space-4 rounded-full shadow-sm">
                 <span className="material-symbols-outlined text-[12px] sm:text-[14px]">bolt</span>
@@ -241,7 +246,11 @@ export const ProductDetailsPage = ({ productId = 1, onNavigate, onOpenChat, onOp
                       activePhotoIdx === idx ? 'border-primary ring-2 ring-primary/30 opacity-100' : 'border-transparent opacity-70 hover:opacity-100'
                     }`}
                   >
-                    <img src={img} alt="Thumb" className="w-full h-full object-cover" />
+                    <img 
+                      src={img} 
+                      alt="Thumb" 
+                      className="w-full h-full object-cover" 
+                    />
                   </button>
                 ))}
               </div>

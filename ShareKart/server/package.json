@@ -9,6 +9,7 @@
     "dev": "node --watch src/index.js",
     "seed": "node src/seeds/seedData.js",
     "seed:pg": "node src/seeds/seedData.js",
+    "sync:images": "node src/utils/syncImagesToSupabase.js",
     "test": "node --test tests/*.test.js"
   },
   "dependencies": {
